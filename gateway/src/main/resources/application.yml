@@ -1,0 +1,173 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: api-gateway
+  data:
+    redis:
+      host: ${REDIS_HOST:redis}
+      port: ${REDIS_PORT:6379}
+      password: ${REDIS_PASSWORD:}
+  cloud:
+    gateway:
+      discovery:
+        locator:
+          enabled: true
+          lower-case-service-id: true
+      # Global CORS
+      globalcors:
+        corsConfigurations:
+          '[/**]':
+            allowedOrigins: "*"
+            allowedMethods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"]
+            allowedHeaders: "*"
+            exposedHeaders: ["X-Request-ID"]
+      # Default filters applied to all routes
+      default-filters:
+        - DedupeResponseHeader=Access-Control-Allow-Credentials Access-Control-Allow-Origin
+      routes:
+        # Auth Service (public - no JWT required)
+        - id: auth-route
+          uri: lb://account-service
+          predicates:
+            - Path=/api/v1/auth/**
+          filters:
+            - name: CircuitBreaker
+              args:
+                name: auth-cb
+                fallbackUri: forward:/fallback/auth
+
+        # Account Service
+        - id: account-route
+          uri: lb://account-service
+          predicates:
+            - Path=/api/v1/accounts/**
+          filters:
+            - name: RequestRateLimiter
+              args:
+                redis-rate-limiter.replenishRate: 60
+                redis-rate-limiter.burstCapacity: 100
+                redis-rate-limiter.requestedTokens: 1
+                key-resolver: "#{@ipKeyResolver}"
+                deny-empty-key: false
+            - name: CircuitBreaker
+              args:
+                name: account-cb
+                fallbackUri: forward:/fallback/account
+
+        # Payment Service
+        - id: payment-route
+          uri: lb://payment-service
+          predicates:
+            - Path=/api/v1/payments/**
+          filters:
+            - name: RequestRateLimiter
+              args:
+                redis-rate-limiter.replenishRate: 30
+                redis-rate-limiter.burstCapacity: 60
+                redis-rate-limiter.requestedTokens: 1
+                key-resolver: "#{@ipKeyResolver}"
+                deny-empty-key: false
+            - name: CircuitBreaker
+              args:
+                name: payment-cb
+                fallbackUri: forward:/fallback/payment
+
+        # Loan Service
+        - id: loan-route
+          uri: lb://loan-service
+          predicates:
+            - Path=/api/v1/loans/**
+          filters:
+            - name: CircuitBreaker
+              args:
+                name: loan-cb
+                fallbackUri: forward:/fallback/loan
+
+        # Fraud Service (internal only - but still has endpoint)
+        - id: fraud-route
+          uri: lb://fraud-service
+          predicates:
+            - Path=/api/v1/fraud/**
+          filters:
+            - name: CircuitBreaker
+              args:
+                name: fraud-cb
+                fallbackUri: forward:/fallback/fraud
+
+        # Report Service
+        - id: report-route
+          uri: lb://report-service
+          predicates:
+            - Path=/api/v1/reports/**
+          filters:
+            - name: CircuitBreaker
+              args:
+                name: report-cb
+                fallbackUri: forward:/fallback/report
+
+        # Notification Service
+        - id: notification-route
+          uri: lb://notification-service
+          predicates:
+            - Path=/api/v1/notifications/**
+          filters:
+            - name: CircuitBreaker
+              args:
+                name: notification-cb
+                fallbackUri: forward:/fallback/notification
+
+        # Audit Service
+        - id: audit-route
+          uri: lb://audit-service
+          predicates:
+            - Path=/api/v1/audit/**
+          filters:
+            - name: CircuitBreaker
+              args:
+                name: audit-cb
+                fallbackUri: forward:/fallback/audit
+
+eureka:
+  client:
+    service-url:
+      defaultZone: http://${EUREKA_USERNAME:admin}:${EUREKA_PASSWORD:admin123}@eureka-server:8761/eureka/
+    fetch-registry: true
+    register-with-eureka: true
+  instance:
+    prefer-ip-address: true
+    lease-renewal-interval-in-seconds: 10
+
+jwt:
+  secret: ${JWT_SECRET:finance-secret-key-must-be-at-least-256-bits-long-for-hs256}
+
+resilience4j:
+  circuitbreaker:
+    configs:
+      default:
+        slidingWindowSize: 10
+        failureRateThreshold: 50
+        waitDurationInOpenState: 30s
+        permittedNumberOfCallsInHalfOpenState: 3
+        slidingWindowType: COUNT_BASED
+  timelimiter:
+    configs:
+      default:
+        timeoutDuration: 10s
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus,gateway
+  endpoint:
+    health:
+      show-details: always
+    gateway:
+      enabled: true
+
+logging:
+  level:
+    org.springframework.cloud.gateway: INFO
+    com.finance.gateway: DEBUG

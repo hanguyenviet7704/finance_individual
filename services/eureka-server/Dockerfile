@@ -8,7 +8,7 @@ RUN mvn package -DskipTests -q
 FROM eclipse-temurin:21-jre-alpine
 RUN addgroup -S finance && adduser -S finance -G finance
 WORKDIR /app
-COPY --from=builder /build/target/api-gateway-1.0.0.jar app.jar
+COPY --from=builder /build/target/eureka-server-1.0.0.jar app.jar
 USER finance
-EXPOSE 8080
-ENTRYPOINT ["java", "-jar", "app.jar"]
+EXPOSE 8761
+ENTRYPOINT ["java", "-XX:MaxRAMPercentage=75", "-XX:+UseG1GC", "-jar", "app.jar"]

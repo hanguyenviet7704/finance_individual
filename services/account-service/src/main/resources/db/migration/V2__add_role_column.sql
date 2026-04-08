@@ -1,0 +1,3 @@
+ALTER TABLE accounts
+    ADD COLUMN role VARCHAR(20) NOT NULL DEFAULT 'CUSTOMER'
+    AFTER kyc_status;

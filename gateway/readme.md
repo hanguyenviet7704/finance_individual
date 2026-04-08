@@ -2,29 +2,52 @@
 
 ## Overview
 
-The API Gateway serves as the single entry point for all client requests. It routes incoming requests to the appropriate backend microservice.
-
-## Responsibilities
-
-- **Request routing**: Forward requests to the correct service
-- **Load balancing**: Distribute traffic (if applicable)
-- **Authentication**: Validate tokens/credentials (optional)
-- **Rate limiting**: Protect services from overload (optional)
-- **CORS handling**: Allow frontend cross-origin requests
-- **Request/Response transformation**: Modify headers, paths as needed
+Spring Cloud Gateway serving as the single entry point for all client requests. Handles JWT authentication, rate limiting, circuit breaking, and routes requests to downstream microservices via Eureka service discovery.
 
 ## Tech Stack
 
-| Component  | Choice             |
-|------------|--------------------|
-| Approach   | *(e.g., Nginx, Express, FastAPI, Kong, Traefik)* |
+| Component       | Choice                              |
+|-----------------|-------------------------------------|
+| Framework       | Spring Cloud Gateway (reactive)     |
+| Service Discovery | Spring Cloud Netflix Eureka Client|
+| Auth            | JWT (JJWT 0.12.5)                  |
+| Rate Limiting   | Redis-based (RequestRateLimiter)    |
+| Circuit Breaker | Resilience4j                        |
+| Java            | 21 (Eclipse Temurin)               |
+
+## Responsibilities
+
+- **JWT Authentication**: Validates Bearer tokens and injects `X-User-ID`, `X-Account-ID`, `X-User-Role`, `X-User-Email` headers for downstream services
+- **Request Routing**: Routes requests to correct services via Eureka load balancing (`lb://service-name`)
+- **Rate Limiting**: Redis-backed IP-based rate limiting (60 req/s for accounts, 30 req/s for payments)
+- **Circuit Breaking**: Resilience4j circuit breakers with fallback endpoints
+- **Request Logging**: Adds `X-Request-ID` to all requests and logs timing
+- **CORS**: Global CORS configuration for frontend
 
 ## Routing Table
 
-| External Path        | Target Service | Internal URL                   |
-|----------------------|----------------|--------------------------------|
-| `/api/service-a/*`   | Service A      | `http://service-a:5000/*`      |
-| `/api/service-b/*`   | Service B      | `http://service-b:5000/*`      |
+| External Path              | Target Service       | Auth Required |
+|----------------------------|----------------------|---------------|
+| `POST /api/v1/auth/**`     | account-service      | No            |
+| `GET/POST /api/v1/accounts/**` | account-service  | Yes           |
+| `GET/POST /api/v1/payments/**` | payment-service  | Yes           |
+| `GET/POST /api/v1/loans/**`    | loan-service     | Yes           |
+| `GET/POST /api/v1/fraud/**`    | fraud-service    | Yes           |
+| `GET/POST /api/v1/reports/**`  | report-service   | Yes           |
+| `GET/POST /api/v1/notifications/**` | notification-service | Yes  |
+| `GET/POST /api/v1/audit/**`    | audit-service    | Yes           |
+
+## Public Paths (no JWT required)
+
+- `POST /api/v1/auth/login`
+- `POST /api/v1/auth/register`
+- `POST /api/v1/auth/refresh`
+- `GET /actuator/health`
+- `GET /health`
+
+## Fallback Endpoints
+
+When a downstream service is unavailable, circuit breaker redirects to `/fallback/{service}` which returns a `503 SERVICE_UNAVAILABLE` response.
 
 ## Running
 
@@ -35,10 +58,20 @@ docker compose up gateway --build
 
 ## Configuration
 
-The gateway uses Docker Compose networking. Services are accessible by their
-service names defined in `docker-compose.yml` (e.g., `service-a`, `service-b`).
+Key environment variables:
+
+| Variable           | Default                    | Description                  |
+|--------------------|----------------------------|------------------------------|
+| `JWT_SECRET`       | finance-secret-key-...     | JWT signing secret (min 256 bits) |
+| `REDIS_HOST`       | redis                      | Redis hostname               |
+| `REDIS_PORT`       | 6379                       | Redis port                   |
+| `EUREKA_USERNAME`  | admin                      | Eureka basic auth username   |
+| `EUREKA_PASSWORD`  | admin123                   | Eureka basic auth password   |
 
 ## Notes
 
-- Use service names (not `localhost`) for upstream URLs inside Docker
-- The gateway exposes port 8080 to the host
+- Uses Docker Compose service names (not `localhost`) for upstream URLs
+- Gateway port: 8080 (external) → 8080 (internal)
+- Eureka URL: `http://eureka-server:8761/eureka/`
+- Redis URL: `redis:6379`
+- Does NOT use `spring-boot-starter-web` (reactive stack only)

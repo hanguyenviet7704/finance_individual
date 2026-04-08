@@ -1,0 +1,523 @@
+openapi: 3.0.3
+info:
+  title: Account Service API
+  description: |
+    Finance Account Service — manages user accounts, KYC, authentication, and account operations.
+    All endpoints (except auth and health) require a valid JWT Bearer token issued by this service.
+    The API Gateway injects X-User-ID, X-Account-ID, X-User-Role headers after JWT verification.
+  version: 1.0.0
+  contact:
+    name: TV1 - Thanh vien 1
+
+servers:
+  - url: http://localhost:8080
+    description: Via API Gateway (development)
+  - url: http://localhost:8081
+    description: Direct (development only)
+
+tags:
+  - name: auth
+    description: Authentication operations
+  - name: accounts
+    description: Account management operations
+  - name: health
+    description: Health check
+
+paths:
+
+  /api/v1/auth/login:
+    post:
+      tags: [auth]
+      summary: Login with account number and password
+      operationId: login
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [account_number, password]
+              properties:
+                account_number:
+                  type: string
+                  example: FIN0000000000001
+                password:
+                  type: string
+                  format: password
+                  example: password123
+      responses:
+        '200':
+          description: Login successful, returns JWT tokens
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TokenResponse'
+        '401':
+          description: Invalid credentials
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/v1/auth/logout:
+    post:
+      tags: [auth]
+      summary: Logout (client should discard JWT)
+      operationId: logout
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Logout successful
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Logged out successfully
+
+  /api/v1/accounts:
+    get:
+      tags: [accounts]
+      summary: Get all accounts (paginated)
+      operationId: getAllAccounts
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 0
+        - name: size
+          in: query
+          schema:
+            type: integer
+            default: 20
+        - name: sort
+          in: query
+          schema:
+            type: string
+            example: createdAt,desc
+      responses:
+        '200':
+          description: Paginated list of accounts
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PagedAccountResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+    post:
+      tags: [accounts]
+      summary: Create a new account for the authenticated user
+      operationId: createAccount
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: X-User-ID
+          in: header
+          required: true
+          description: Injected by API Gateway from JWT claims
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateAccountRequest'
+      responses:
+        '201':
+          description: Account created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AccountResponse'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '409':
+          description: Account already exists for this user
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/v1/accounts/{id}:
+    get:
+      tags: [accounts]
+      summary: Get account by ID
+      operationId: getAccount
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/AccountId'
+      responses:
+        '200':
+          description: Account found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AccountResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    delete:
+      tags: [accounts]
+      summary: Close an account
+      operationId: closeAccount
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/AccountId'
+      responses:
+        '204':
+          description: Account closed successfully
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          description: Cannot close account with remaining balance
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/v1/accounts/me:
+    get:
+      tags: [accounts]
+      summary: Get the authenticated user's account
+      operationId: getMyAccount
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: X-User-ID
+          in: header
+          required: true
+          description: Injected by API Gateway from JWT claims
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Account found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AccountResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /api/v1/accounts/{id}/balance:
+    get:
+      tags: [accounts]
+      summary: Get account balance
+      operationId: getBalance
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/AccountId'
+      responses:
+        '200':
+          description: Current available balance
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  balance:
+                    type: number
+                    format: decimal
+                    example: 1500000.00
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /api/v1/accounts/{id}/limits:
+    put:
+      tags: [accounts]
+      summary: Update daily transaction limit
+      operationId: updateLimits
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/AccountId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateLimitRequest'
+      responses:
+        '200':
+          description: Limits updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AccountResponse'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /api/v1/accounts/{id}/freeze:
+    post:
+      tags: [accounts]
+      summary: Freeze an account
+      operationId: freezeAccount
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/AccountId'
+        - name: reason
+          in: query
+          schema:
+            type: string
+            default: Manual freeze
+      responses:
+        '200':
+          description: Account frozen
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AccountResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /api/v1/accounts/{id}/unfreeze:
+    post:
+      tags: [accounts]
+      summary: Unfreeze an account
+      operationId: unfreezeAccount
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/AccountId'
+      responses:
+        '200':
+          description: Account unfrozen
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AccountResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          description: Account is not frozen
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /health:
+    get:
+      tags: [health]
+      summary: Health check
+      operationId: health
+      responses:
+        '200':
+          description: Service is healthy
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: ok
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  parameters:
+    AccountId:
+      name: id
+      in: path
+      required: true
+      description: Account UUID
+      schema:
+        type: string
+        format: uuid
+
+  responses:
+    Unauthorized:
+      description: Missing or invalid JWT token
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    NotFound:
+      description: Account not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    ValidationError:
+      description: Request validation failed
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+
+  schemas:
+    TokenResponse:
+      type: object
+      properties:
+        access_token:
+          type: string
+          description: JWT access token
+        refresh_token:
+          type: string
+          description: Refresh token (UUID)
+        token_type:
+          type: string
+          example: Bearer
+        expires_in:
+          type: string
+          description: Token expiry in seconds
+          example: "900"
+
+    AccountResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        userId:
+          type: string
+          format: uuid
+        accountNumber:
+          type: string
+          example: FIN0000000000001
+        accountType:
+          type: string
+          enum: [SAVING, CHECKING, LOAN]
+        balance:
+          type: number
+          format: decimal
+          example: 1500000.00
+        availableBalance:
+          type: number
+          format: decimal
+          example: 1500000.00
+        currency:
+          type: string
+          example: VND
+        status:
+          type: string
+          enum: [ACTIVE, FROZEN, CLOSED]
+        dailyLimit:
+          type: number
+          format: decimal
+          example: 50000000.00
+        dailyUsed:
+          type: number
+          format: decimal
+          example: 0.00
+        kycStatus:
+          type: string
+          enum: [PENDING, SUBMITTED, VERIFIED, REJECTED]
+        fullName:
+          type: string
+          example: Nguyen Van A
+        email:
+          type: string
+          format: email
+          example: nguyenvana@example.com
+        phone:
+          type: string
+          example: "0901234567"
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    PagedAccountResponse:
+      type: object
+      properties:
+        content:
+          type: array
+          items:
+            $ref: '#/components/schemas/AccountResponse'
+        totalElements:
+          type: integer
+        totalPages:
+          type: integer
+        size:
+          type: integer
+        number:
+          type: integer
+
+    CreateAccountRequest:
+      type: object
+      required: [accountType, fullName]
+      properties:
+        accountType:
+          type: string
+          enum: [SAVING, CHECKING, LOAN]
+        fullName:
+          type: string
+          maxLength: 100
+          example: Nguyen Van A
+        email:
+          type: string
+          format: email
+        phone:
+          type: string
+          pattern: '^(\+84|0)[0-9]{9}$'
+          example: "0901234567"
+        currency:
+          type: string
+          default: VND
+          example: VND
+
+    UpdateLimitRequest:
+      type: object
+      required: [dailyLimit]
+      properties:
+        dailyLimit:
+          type: number
+          format: decimal
+          minimum: 100000
+          description: Minimum 100,000 VND
+          example: 10000000.00
+
+    ErrorResponse:
+      type: object
+      properties:
+        code:
+          type: string
+          example: ACCOUNT_NOT_FOUND
+        message:
+          type: string
+          example: Account not found
+        details:
+          type: object
+          nullable: true
+        timestamp:
+          type: string
+          format: date-time
