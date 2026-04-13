@@ -9,6 +9,7 @@ import com.finance.account.exception.AccountException;
 import com.finance.account.repository.AccountRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -18,6 +19,7 @@ import org.springframework.data.domain.Pageable;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.Map;
 import java.util.UUID;
 
 @Slf4j
@@ -90,6 +92,13 @@ public class AccountService {
     }
 
     @Transactional(readOnly = true)
+    public AccountResponse getAccountByNumber(String accountNumber) {
+        return accountRepository.findByAccountNumber(accountNumber)
+            .map(this::toResponse)
+            .orElseThrow(() -> AccountException.notFound("accountNumber=" + accountNumber));
+    }
+
+    @Transactional(readOnly = true)
     public BigDecimal getBalance(UUID accountId) {
         Account account = accountRepository.findById(accountId)
             .orElseThrow(() -> AccountException.notFound(accountId.toString()));
@@ -118,11 +127,7 @@ public class AccountService {
         log.info("Account frozen: {} reason: {}", accountId, reason);
 
         kafkaTemplate.send("account.frozen", accountId.toString(),
-            new Object() {
-                public final String eventType = "account.frozen";
-                public final UUID id = accountId;
-                public final String r = reason;
-            });
+            Map.of("eventType", "account.frozen", "id", accountId, "reason", reason));
 
         return toResponse(account);
     }
@@ -151,6 +156,48 @@ public class AccountService {
 
         account.setStatus(Account.AccountStatus.CLOSED);
         accountRepository.save(account);
+    }
+
+    @KafkaListener(topics = "payment.completed", groupId = "account-service")
+    @Transactional
+    public void handlePaymentCompleted(Map<String, Object> event) {
+        Map<String, Object> payload = (Map<String, Object>) event.get("payload");
+        if (payload == null) return;
+        
+        String fromAccountIdStr = (String) payload.get("fromAccountId");
+        String toAccountIdStr = (String) payload.get("toAccountId");
+        Object amountObj = payload.get("amount");
+        BigDecimal amount = new BigDecimal(amountObj.toString());
+        String type = (String) payload.get("type");
+
+        if ("TRANSFER".equals(type) || "PAYMENT".equals(type)) {
+            if (fromAccountIdStr != null) {
+                accountRepository.findById(UUID.fromString(fromAccountIdStr)).ifPresent(acc -> {
+                    acc.debit(amount);
+                    accountRepository.save(acc);
+                });
+            }
+            if (toAccountIdStr != null) {
+                accountRepository.findById(UUID.fromString(toAccountIdStr)).ifPresent(acc -> {
+                    acc.credit(amount);
+                    accountRepository.save(acc);
+                });
+            }
+        } else if ("TOPUP".equals(type)) {
+            if (toAccountIdStr != null) {
+                accountRepository.findById(UUID.fromString(toAccountIdStr)).ifPresent(acc -> {
+                    acc.credit(amount);
+                    accountRepository.save(acc);
+                });
+            }
+        } else if ("WITHDRAW".equals(type)) {
+             if (fromAccountIdStr != null) {
+                accountRepository.findById(UUID.fromString(fromAccountIdStr)).ifPresent(acc -> {
+                    acc.debit(amount);
+                    accountRepository.save(acc);
+                });
+            }
+        }
     }
 
     private String generateAccountNumber() {

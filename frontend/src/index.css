@@ -1,0 +1,58 @@
+@import url('https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@300;400;500;600;700;800&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  * {
+    box-sizing: border-box;
+  }
+
+  body {
+    font-family: 'Be Vietnam Pro', 'Inter', system-ui, -apple-system, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    @apply text-gray-900 bg-[#F0F4FA];
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-semibold;
+  }
+}
+
+@layer components {
+  /* BIDV card style */
+  .bidv-card {
+    @apply bg-white rounded-xl border border-gray-100 shadow-card;
+  }
+
+  /* BIDV input */
+  .bidv-input {
+    @apply block w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm
+           focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500
+           transition-colors;
+  }
+
+  /* BIDV section title */
+  .bidv-section-title {
+    @apply text-xs font-bold uppercase tracking-widest text-primary-200 px-3 pt-5 pb-2;
+  }
+}
+
+@layer utilities {
+  .animate-in {
+    animation: animateIn 0.18s ease-out;
+  }
+
+  @keyframes animateIn {
+    from { opacity: 0; transform: scale(0.97) translateY(4px); }
+    to   { opacity: 1; transform: scale(1)    translateY(0);   }
+  }
+
+  /* Scrollbar — BIDV navy tint */
+  ::-webkit-scrollbar        { width: 5px; height: 5px; }
+  ::-webkit-scrollbar-track  { background: #F0F4FA; }
+  ::-webkit-scrollbar-thumb  { background: #9FAEDD; border-radius: 9999px; }
+  ::-webkit-scrollbar-thumb:hover { background: #6683C0; }
+}

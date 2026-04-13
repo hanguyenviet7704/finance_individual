@@ -40,32 +40,41 @@ public class Account {
     @Column(name = "account_type", nullable = false)
     private AccountType accountType;
 
+    @Builder.Default
     @Column(name = "balance", nullable = false, precision = 18, scale = 2)
     private BigDecimal balance = BigDecimal.ZERO;
 
+    @Builder.Default
     @Column(name = "available_balance", nullable = false, precision = 18, scale = 2)
     private BigDecimal availableBalance = BigDecimal.ZERO;
 
+    @Builder.Default
     @Column(name = "currency", nullable = false, length = 3)
     private String currency = "VND";
 
+    @Builder.Default
     @Enumerated(EnumType.STRING)
     @Column(name = "status", nullable = false)
     private AccountStatus status = AccountStatus.ACTIVE;
 
+    @Builder.Default
     @Column(name = "daily_limit", nullable = false, precision = 18, scale = 2)
     private BigDecimal dailyLimit = new BigDecimal("50000000");
 
+    @Builder.Default
     @Column(name = "daily_used", nullable = false, precision = 18, scale = 2)
     private BigDecimal dailyUsed = BigDecimal.ZERO;
 
+    @Builder.Default
     @Enumerated(EnumType.STRING)
     @Column(name = "kyc_status", nullable = false)
     private KycStatus kycStatus = KycStatus.PENDING;
 
+    @Builder.Default
     @Column(name = "role", nullable = false, length = 20)
     private String role = "CUSTOMER";
 
+    @Builder.Default
     @Column(name = "password_hash", nullable = false, length = 255)
     private String passwordHash = "";
 
@@ -86,6 +95,7 @@ public class Account {
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
 
+    @Builder.Default
     @Version
     @Column(name = "version")
     private Integer version = 0;  // Optimistic locking

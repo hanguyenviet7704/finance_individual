@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(find \"c:\\\\TaiLieu\\\\TaiLieuPTIT\\\\TaiLieuKy2Nam4\\\\MonPTPMThayHung\\\\finace\\\\Finance/services\" -name \"readme.md\" -exec head -50 {} +)",
+      "Bash(xargs head:*)",
+      "Bash([ -f \"$dir/readme.md\" ])",
+      "Bash(ls services/fraud-service/src/)",
+      "Bash(ls services/fraud-service/src/main/java/com/finance/fraud/)",
+      "Bash(echo \"EXIT:$?\")",
+      "Bash(xargs ls:*)"
+    ]
+  }
+}

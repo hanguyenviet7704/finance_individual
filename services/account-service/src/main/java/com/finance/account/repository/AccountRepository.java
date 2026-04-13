@@ -22,6 +22,10 @@ public interface AccountRepository extends JpaRepository<Account, UUID> {
 
     boolean existsByAccountNumber(String accountNumber);
 
+    boolean existsByEmail(String email);
+
+    boolean existsByPhone(String phone);
+
     // Optimistic locking for debit/credit
     @Lock(LockModeType.OPTIMISTIC)
     @Query("SELECT a FROM Account a WHERE a.id = :id")

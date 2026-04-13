@@ -1,0 +1,550 @@
+openapi: 3.0.3
+info:
+  title: Loan Service API
+  description: |
+    Finance Loan Service — quản lý đăng ký vay, phê duyệt, và lịch trả nợ.
+    Tất cả endpoint đều yêu cầu JWT Bearer token hợp lệ.
+
+    **Cơ sở dữ liệu kép:**
+    - MySQL: dữ liệu khoản vay có cấu trúc (trạng thái, số tiền, lãi suất)
+    - MongoDB: hồ sơ vay linh hoạt (tài liệu KYC, lịch sử thẩm định, lịch trả nợ)
+
+    **Credit Score (Điểm tín dụng):**
+    - Thang điểm: 300–850 (tương tự FICO)
+    - Thành phần: Lịch sử thanh toán (35%), Tỷ lệ sử dụng tín dụng (30%), Độ dài lịch sử (15%), Đa dạng giao dịch (10%), Tra cứu gần đây (10%)
+    - Điểm tối thiểu để nộp đơn: 400
+    - Cache trong Redis: TTL 24 giờ
+
+    **Phân loại điểm:**
+    | Điểm | Hạng | Lãi suất tham chiếu |
+    |---|---|---|
+    | 750–850 | A+ | 6–8%/năm |
+    | 700–749 | A | 8–10%/năm |
+    | 650–699 | B+ | 10–12%/năm |
+    | 600–649 | B | 12–15%/năm |
+    | 550–599 | C+ | 15–18%/năm |
+    | 500–549 | C | 18–22%/năm |
+    | 400–499 | D | Từ chối hoặc thế chấp |
+  version: 1.0.0
+  contact:
+    name: TV4 - Thanh vien 4
+
+servers:
+  - url: http://localhost:8080
+    description: Qua API Gateway (development)
+  - url: http://localhost:8084
+    description: Trực tiếp (development only)
+
+tags:
+  - name: loans
+    description: Quản lý khoản vay
+  - name: credit
+    description: Điểm tín dụng
+  - name: health
+    description: Health check
+
+paths:
+
+  /api/v1/loans/apply:
+    post:
+      tags: [loans]
+      summary: Nộp đơn đăng ký vay mới
+      operationId: applyLoan
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: X-User-ID
+          in: header
+          required: true
+          description: Inject bởi API Gateway từ JWT claims
+          schema:
+            type: string
+            format: uuid
+        - name: X-Account-ID
+          in: header
+          required: true
+          description: UUID tài khoản nhận tiền giải ngân
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ApplyLoanRequest'
+      responses:
+        '201':
+          description: Đơn vay đã nộp thành công — đang chờ xét duyệt
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoanResponse'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '422':
+          description: Điểm tín dụng không đủ (< 400) hoặc đã có khoản vay đang xử lý
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/v1/loans:
+    get:
+      tags: [loans]
+      summary: Lấy danh sách khoản vay của người dùng hiện tại (phân trang)
+      operationId: getMyLoans
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: X-User-ID
+          in: header
+          required: true
+          description: Inject bởi API Gateway
+          schema:
+            type: string
+            format: uuid
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 0
+        - name: size
+          in: query
+          schema:
+            type: integer
+            default: 20
+        - name: sort
+          in: query
+          schema:
+            type: string
+            example: createdAt,desc
+      responses:
+        '200':
+          description: Danh sách khoản vay phân trang
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PagedLoanResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/v1/loans/{id}:
+    get:
+      tags: [loans]
+      summary: Lấy thông tin chi tiết khoản vay (bao gồm lịch trả nợ và tài liệu)
+      operationId: getLoanById
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/LoanId'
+      responses:
+        '200':
+          description: Thông tin chi tiết khoản vay
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoanResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /api/v1/loans/{id}/approve:
+    put:
+      tags: [loans]
+      summary: Phê duyệt khoản vay (chỉ Admin/Officer)
+      operationId: approveLoan
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/LoanId'
+        - name: X-User-ID
+          in: header
+          required: true
+          description: ID của nhân viên phê duyệt
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [approvedAmount, interestRate]
+              properties:
+                approvedAmount:
+                  type: number
+                  format: decimal
+                  description: Số tiền được phê duyệt (có thể nhỏ hơn số tiền đề nghị)
+                  example: 50000000.00
+                interestRate:
+                  type: number
+                  format: decimal
+                  description: Lãi suất hàng năm (%)
+                  example: 10.5
+                note:
+                  type: string
+                  description: Ghi chú của nhân viên phê duyệt
+                  example: Đủ điều kiện — phê duyệt 50 triệu
+      responses:
+        '200':
+          description: Khoản vay đã được phê duyệt
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoanResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          description: Không có quyền phê duyệt
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          description: Khoản vay không ở trạng thái có thể phê duyệt
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/v1/loans/{id}/reject:
+    put:
+      tags: [loans]
+      summary: Từ chối khoản vay (chỉ Admin/Officer)
+      operationId: rejectLoan
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/LoanId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [reason]
+              properties:
+                reason:
+                  type: string
+                  description: Lý do từ chối
+                  example: Điểm tín dụng không đủ yêu cầu
+      responses:
+        '200':
+          description: Khoản vay đã bị từ chối
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoanResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          description: Không có quyền từ chối
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /api/v1/loans/score/{userId}:
+    get:
+      tags: [credit]
+      summary: Tính và lấy điểm tín dụng của người dùng
+      operationId: getCreditScore
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          description: UUID của người dùng
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Điểm tín dụng hiện tại
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CreditScoreResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /health:
+    get:
+      tags: [health]
+      summary: Health check
+      operationId: health
+      responses:
+        '200':
+          description: Service đang hoạt động bình thường
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: ok
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  parameters:
+    LoanId:
+      name: id
+      in: path
+      required: true
+      description: UUID của khoản vay
+      schema:
+        type: string
+        format: uuid
+
+  responses:
+    Unauthorized:
+      description: Thiếu hoặc JWT token không hợp lệ
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    NotFound:
+      description: Không tìm thấy khoản vay
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    ValidationError:
+      description: Dữ liệu đầu vào không hợp lệ
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+
+  schemas:
+
+    ApplyLoanRequest:
+      type: object
+      required: [loanType, amount, termMonths]
+      properties:
+        loanType:
+          type: string
+          enum: [PERSONAL, VEHICLE, MORTGAGE, BUSINESS, EDUCATION]
+          description: Loại khoản vay
+        amount:
+          type: number
+          format: decimal
+          minimum: 1000000
+          description: Số tiền đề nghị vay (tối thiểu 1.000.000 VND)
+          example: 50000000.00
+        termMonths:
+          type: integer
+          minimum: 3
+          maximum: 360
+          description: Thời hạn vay (tháng)
+          example: 24
+        purpose:
+          type: string
+          description: Mục đích vay
+          example: Mua xe máy phục vụ đi lại
+
+    LoanResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        loanCode:
+          type: string
+          description: Mã khoản vay duy nhất
+          example: LOAN-2026-001234
+        userId:
+          type: string
+          format: uuid
+        status:
+          type: string
+          enum: [PENDING, UNDER_REVIEW, APPROVED, REJECTED, DISBURSED, ACTIVE, COMPLETED, DEFAULTED]
+        loanType:
+          type: string
+          enum: [PERSONAL, VEHICLE, MORTGAGE, BUSINESS, EDUCATION]
+        requestedAmount:
+          type: number
+          format: decimal
+          example: 50000000.00
+        approvedAmount:
+          type: number
+          format: decimal
+          nullable: true
+          example: 50000000.00
+        interestRate:
+          type: number
+          format: decimal
+          nullable: true
+          description: Lãi suất hàng năm (%)
+          example: 10.5
+        termMonths:
+          type: integer
+          example: 24
+        purpose:
+          type: string
+          example: Mua xe máy phục vụ đi lại
+        creditScore:
+          type: integer
+          description: Điểm tín dụng tại thời điểm nộp đơn
+          example: 680
+        creditGrade:
+          type: string
+          description: Hạng tín dụng
+          example: B+
+        repaymentSchedule:
+          type: array
+          items:
+            $ref: '#/components/schemas/RepaymentInstallment'
+          description: Lịch trả nợ (chỉ có sau khi APPROVED)
+        documents:
+          type: array
+          items:
+            $ref: '#/components/schemas/LoanDocument'
+          description: Tài liệu đính kèm hồ sơ vay
+        createdAt:
+          type: string
+          format: date-time
+        approvedAt:
+          type: string
+          format: date-time
+          nullable: true
+
+    RepaymentInstallment:
+      type: object
+      properties:
+        installmentNo:
+          type: integer
+          description: Kỳ trả thứ bao nhiêu
+          example: 1
+        dueDate:
+          type: string
+          format: date-time
+        principal:
+          type: number
+          format: decimal
+          description: Phần gốc trong kỳ này
+          example: 2000000.00
+        interest:
+          type: number
+          format: decimal
+          description: Phần lãi trong kỳ này
+          example: 437500.00
+        total:
+          type: number
+          format: decimal
+          description: Tổng cần trả trong kỳ này
+          example: 2437500.00
+        status:
+          type: string
+          enum: [PENDING, PAID, OVERDUE]
+        paidAt:
+          type: string
+          format: date-time
+          nullable: true
+
+    LoanDocument:
+      type: object
+      properties:
+        type:
+          type: string
+          enum: [CCCD, INCOME, COLLATERAL]
+          description: Loại tài liệu
+        fileId:
+          type: string
+          description: ID file đã upload
+        fileName:
+          type: string
+          example: cccd_front.jpg
+        status:
+          type: string
+          enum: [PENDING, VERIFIED, REJECTED]
+        rejectionReason:
+          type: string
+          nullable: true
+
+    CreditScoreResponse:
+      type: object
+      properties:
+        userId:
+          type: string
+          format: uuid
+        creditScore:
+          type: integer
+          minimum: 300
+          maximum: 850
+          example: 680
+        creditGrade:
+          type: string
+          example: B+
+        factors:
+          type: object
+          description: Trọng số từng yếu tố ảnh hưởng đến điểm
+          properties:
+            payment_history:
+              type: number
+              format: double
+              description: Lịch sử thanh toán (35%)
+              example: 0.82
+            credit_utilization:
+              type: number
+              format: double
+              description: Tỷ lệ sử dụng tín dụng (30%)
+              example: 0.45
+            history_length:
+              type: number
+              format: double
+              description: Độ dài lịch sử tín dụng (15%)
+              example: 0.60
+        calculatedAt:
+          type: string
+          format: date-time
+
+    PagedLoanResponse:
+      type: object
+      properties:
+        content:
+          type: array
+          items:
+            $ref: '#/components/schemas/LoanResponse'
+        totalElements:
+          type: integer
+        totalPages:
+          type: integer
+        size:
+          type: integer
+        number:
+          type: integer
+
+    ErrorResponse:
+      type: object
+      properties:
+        code:
+          type: string
+          example: CREDIT_SCORE_INSUFFICIENT
+        message:
+          type: string
+          example: Điểm tín dụng không đủ điều kiện đăng ký vay
+        details:
+          type: object
+          nullable: true
+        timestamp:
+          type: string
+          format: date-time
