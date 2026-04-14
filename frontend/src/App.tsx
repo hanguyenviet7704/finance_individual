@@ -17,6 +17,8 @@ import { FraudPage }             from '@/pages/admin/FraudPage'
 import { AuditPage }             from '@/pages/admin/AuditPage'
 import { AdminAccountsPage }     from '@/pages/admin/AdminAccountsPage'
 import { AdminTransactionsPage } from '@/pages/admin/AdminTransactionsPage'
+import { StockPage }             from '@/pages/StockPage'
+import { AdminStocksPage }       from '@/pages/admin/AdminStocksPage'
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -46,12 +48,14 @@ export default function App() {
               <Route path="/payment"    element={<PaymentPage />} />
               <Route path="/loan"       element={<LoanPage />} />
               <Route path="/report"         element={<ReportPage />} />
+              <Route path="/stock"          element={<StockPage />} />
               <Route path="/profile"        element={<ProfilePage />} />
               <Route path="/notifications"  element={<NotificationsPage />} />
               <Route path="/admin/fraud"         element={<FraudPage />} />
               <Route path="/admin/audit"         element={<AuditPage />} />
               <Route path="/admin/accounts"      element={<AdminAccountsPage />} />
               <Route path="/admin/transactions"  element={<AdminTransactionsPage />} />
+              <Route path="/admin/stocks"        element={<AdminStocksPage />} />
             </Route>
           </Route>
 

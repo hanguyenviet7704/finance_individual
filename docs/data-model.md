@@ -15,6 +15,7 @@ Tài liệu mô tả schema cơ sở dữ liệu của từng service. Mỗi ser
 | Notification Service | `notification_db` | MongoDB 7.0 | 27017 |
 | Report Service | `report_db` | MongoDB 7.0 | 27017 |
 | Audit Service | `audit_db` | MongoDB 7.0 | 27017 |
+| Stock Service | `stock_db` | MySQL 8.0 | 3311 |
 
 ---
 
@@ -400,6 +401,60 @@ erDiagram
 
 ---
 
+## 8. Stock Service — MySQL `stock_db`
+
+### ERD
+
+```mermaid
+erDiagram
+    STOCKS {
+        int id PK
+        varchar ticker_symbol UK "e.g., VCB"
+        varchar company_name
+        decimal current_price "18,2"
+        enum status "ACTIVE | HALTED"
+        datetime created_at
+        datetime updated_at
+    }
+
+    PORTFOLIOS {
+        uuid id PK
+        uuid user_id INDEX
+        varchar ticker_symbol INDEX
+        int quantity "Default 0"
+        decimal average_buy_price "18,2"
+        datetime updated_at
+    }
+
+    STOCK_ORDERS {
+        uuid id PK
+        uuid user_id INDEX
+        varchar ticker_symbol
+        enum order_type "BUY | SELL"
+        int quantity
+        decimal price_per_share "18,2"
+        decimal fee_amount "18,2"
+        decimal total_amount "18,2"
+        enum status "PENDING | COMPLETED | FAILED"
+        datetime created_at
+    }
+
+    SYSTEM_CONFIG {
+        varchar config_key PK
+        varchar config_value
+        varchar description
+        datetime updated_at
+    }
+```
+
+### Bảng `stocks`, `portfolios`, `stock_orders`
+
+Về cơ bản ánh xạ đúng với ERD. Cần lưu ý các chỉ mục quan trọng:
+- `portfolios(user_id, ticker_symbol)` — để truy xuất danh mục vốn danh nghĩa của tài khoản.
+- `stock_orders(user_id, created_at DESC)` — để hiển thị lịch sử khớp lệnh.
+
+---
+
 ## Redis — Dữ liệu dùng chung
 
 Redis được dùng bởi nhiều service với các namespace tách biệt:
@@ -418,3 +473,4 @@ Redis được dùng bởi nhiều service với các namespace tách biệt:
 | `fraud:blacklist` | Fraud | Vĩnh viễn | Set tài khoản blacklisted |
 | `loan:credit_score:{userId}` | Loan | 24 giờ | Điểm tín dụng cache |
 | `rate_limit:{ip}:{path}` | Gateway | 1 giây | Rate limiting counter |
+| `stock:price:{ticker}` | Stock | 15 giây | Cache tạm thời cho giá chứng khoán (Realtime) |

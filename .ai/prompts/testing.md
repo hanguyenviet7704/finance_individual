@@ -1,45 +1,43 @@
 # Prompt: Generate Tests
 
-Use this prompt to create comprehensive tests for a service or endpoint.
+Use this prompt to create comprehensive tests for a Spring Boot service or endpoint in the Finance project.
 
 ---
 
 ## Prompt
 
 ```
-Generate tests for [SERVICE_NAME] using [TEST_FRAMEWORK].
+Generate tests for [SERVICE_NAME / CLASS_NAME, e.g. PaymentService.java] using JUnit 5, Mockito, and Spring Boot Test.
 
-Test the following:
-1. Health check endpoint (GET /health returns 200 with {"status": "ok"})
-2. CRUD operations for [ENTITY]:
-   - GET /[ENTITIES] returns a list
-   - GET /[ENTITIES]/:id returns a single item or 404
-   - POST /[ENTITIES] creates with valid data, rejects invalid data
-   - PUT /[ENTITIES]/:id updates existing, returns 404 for missing
-   - DELETE /[ENTITIES]/:id deletes existing, returns 404 for missing
-3. Input validation (missing fields, wrong types, boundary values)
-4. Error handling (database errors, network errors)
+Test the following scenarios:
+1. Controller Tests (`@WebMvcTest`):
+   - GET /api/v1/[ENTITIES] returns a list and 200 OK.
+   - GET /api/v1/[ENTITIES]/{id} returns a single item or 404.
+   - POST /api/v1/[ENTITIES] creates with valid data, rejects invalid data (@Valid).
+2. Service Tests (`@ExtendWith(MockitoExtension.class)`):
+   - Happy path: Business logic works, Repository saves data, Kafka publishes event.
+   - Exception path: Entity not found, or validation logic throws custom exceptions.
+   - Mock all external dependencies (Repositories, KafkaTemplate, WebClient).
+3. Integration Tests (Optional, `@SpringBootTest`):
+   - Happy path integrating the Repository and Service.
 
 Requirements:
-- Use [TEST_FRAMEWORK] conventions
-- Include setup/teardown for test data
-- Mock external dependencies (database, other services)
-- Test both happy path and error cases
-- Include meaningful test descriptions
-- Aim for >80% code coverage
+- Given-When-Then test structure.
+- Use `assertThrows` for testing exceptions.
+- Provide clear, descriptive test method names.
+- Aim for >80% code coverage.
 
-Place test files in: services/[SERVICE_NAME]/tests/ (or src/__tests__/ for Node.js)
+Place test files in: `services/[SERVICE_NAME]/src/test/java/com/finance/[service]/`
 ```
 
 ---
 
 ## Example Framework Choices
 
-| Language   | Test Frameworks                     |
-|------------|-------------------------------------|
-| Python     | pytest, unittest                    |
-| Node.js    | Jest, Mocha, Vitest                 |
-| Java       | JUnit 5, Mockito                    |
-| Go         | testing (stdlib), testify           |
-| C#         | xUnit, NUnit, MSTest                |
-| Rust       | cargo test (built-in)               |
+For the Finance Microservices Platform:
+- **Unit Testing**: JUnit 5 + AssertJ
+- **Mocking**: Mockito
+- **API Testing**: MockMvc (Spring Test)
+- **Integration Testing**: Testcontainers (for MySQL, Redis, Kafka)
+- **Frontend Testing**: Vitest + React Testing Library (for the React App)
+```

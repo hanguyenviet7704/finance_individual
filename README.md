@@ -39,7 +39,8 @@ graph LR
     GW --> NS[Notification Service :8085]
     GW --> RS[Report Service :8086]
     GW --> AuS[Audit Service :8087]
-    AS --> MYSQL[(MySQL :3307)]
+    GW --> SS[Stock Service :8088]
+    AS --> MYSQL[(MySQL :3307-3311)]
     AS --> REDIS[(Redis :6380)]
     AS --> KAFKA[(Kafka :9092)]
     KAFKA --> ZK[Zookeeper]
@@ -57,7 +58,8 @@ graph LR
 | **Notification**     | Email/SMS notifications via events     | Spring Boot, MongoDB, Kafka    | 8085 |
 | **Report Service**   | Statement generation and analytics     | Spring Boot, MongoDB, Kafka    | 8086 |
 | **Audit Service**    | Operational traceability log           | Spring Boot, MongoDB, Kafka    | 8087 |
-| **MySQL (x4)**       | Relational persistence                 | MySQL 8.0                      | 3307-3310 |
+| **Stock Service**    | Stock market, portfolios, orders       | Spring Boot, MySQL, Redis      | 8088 |
+| **MySQL (x5)**       | Relational persistence                 | MySQL 8.0                      | 3307-3311 |
 | **MongoDB**          | NoSQL persistence                      | MongoDB 7.0                    | 27017|
 | **Redis**            | Rate limiting, cache, session          | Redis 7-alpine                 | 6380 |
 | **Kafka**            | Async events                           | Confluent Kafka 7.6.0          | 9092 |
@@ -107,6 +109,7 @@ All backend microservices feature auto-generated OpenAPI Documentation. You can 
 - [Notification Service — Swagger UI](http://localhost:8085/swagger-ui/index.html)
 - [Report Service — Swagger UI](http://localhost:8086/swagger-ui/index.html)
 - [Audit Service — Swagger UI](http://localhost:8087/swagger-ui/index.html)
+- [Stock Service — Swagger UI](http://localhost:8088/swagger-ui/index.html)
 
 > 🔐 **Testing with Authorization:** To test protected endpoints, log in via the Frontend (`http://localhost:3000`), copy the `access_token` from your Browser's Network request, and paste it into the **`[Authorize] 🔓`** button inside Swagger.
 
@@ -162,6 +165,10 @@ Reporting service for statements, monthly summaries, and frontend analytics. It 
 ### Audit Service (port 8087)
 Audit and monitoring service for operational traceability. It stores immutable audit logs for support and admin users.
 - See: [`services/audit-service/readme.md`](services/audit-service/readme.md)
+
+### Stock Service (port 8088)
+A new module handling the securities and trading mechanisms, including admin oversight and user portfolios.
+- See: [`services/stock-service/readme.md`](services/stock-service/readme.md)
 
 ---
 

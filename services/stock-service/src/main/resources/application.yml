@@ -1,0 +1,36 @@
+server:
+  port: 8088
+
+spring:
+  application:
+    name: stock-service
+  datasource:
+    url: jdbc:mysql://${MYSQL_HOST:localhost}:3306/${MYSQL_DATABASE:stock_db}?createDatabaseIfNotExist=true&useUnicode=true&characterEncoding=UTF-8&serverTimezone=UTC
+    username: ${DB_USERNAME:root}
+    password: ${DB_PASSWORD:root}
+    driver-class-name: com.mysql.cj.jdbc.Driver
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+
+eureka:
+  client:
+    service-url:
+      defaultZone: http://${EUREKA_USERNAME:admin}:${EUREKA_PASSWORD:admin123}@${EUREKA_HOST:localhost}:8761/eureka/
+    fetch-registry: true
+    register-with-eureka: true
+  instance:
+    prefer-ip-address: true
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      show-details: always

@@ -34,7 +34,8 @@ frontend/src/
 │   ├── accountApi.ts           # Endpoints tài khoản
 │   ├── paymentApi.ts           # Endpoints giao dịch
 │   ├── loanApi.ts              # Endpoints khoản vay
-│   └── reportApi.ts            # Endpoints báo cáo
+│   ├── reportApi.ts            # Endpoints báo cáo
+│   └── stockApi.ts             # Endpoints chứng khoán
 │
 ├── components/
 │   ├── layout/
@@ -56,11 +57,13 @@ frontend/src/
 │   ├── PaymentPage.tsx
 │   ├── LoanPage.tsx
 │   ├── ReportPage.tsx
+│   ├── StockPage.tsx
 │   └── admin/
 │       ├── AdminAccountsPage.tsx
 │       ├── AdminTransactionsPage.tsx
 │       ├── AuditPage.tsx
-│       └── FraudPage.tsx
+│       ├── FraudPage.tsx
+│       └── AdminStocksPage.tsx
 │
 ├── store/
 │   └── authStore.ts            # Zustand store xác thực
@@ -86,10 +89,12 @@ frontend/src/
 /payment            → PaymentPage (protected)
 /loan               → LoanPage (protected)
 /report             → ReportPage (protected)
+/stock              → StockPage (protected)
 /admin/accounts     → AdminAccountsPage (protected + ADMIN)
 /admin/transactions → AdminTransactionsPage (protected + ADMIN)
 /admin/audit        → AuditPage (protected + ADMIN)
 /admin/fraud        → FraudPage (protected + ADMIN)
+/admin/stocks       → AdminStocksPage (protected + ADMIN)
 ```
 
 **ProtectedRoute** kiểm tra `authStore.isAuthenticated`. Nếu chưa đăng nhập → redirect `/login`.
@@ -206,6 +211,22 @@ frontend/src/
 
 ---
 
+### 6b. StockPage
+
+**Mục đích:** Khách hàng xem bảng giá, giao dịch cổ phiếu và quản lý danh mục.
+
+**Tính năng:**
+- Bảng giá realtime (tự động refresh hoặc cache 15s).
+- Đặt lệnh Mua/Bán cổ phiếu (kiểm tra tức thời số dư tài khoản).
+- Hiển thị danh mục đầu tư (Portfolio) và lịch sử khớp lệnh.
+
+**Data fetching:**
+- `GET /api/v1/stocks`
+- `POST /api/v1/stocks/orders`
+- `GET /api/v1/stocks/portfolios/me`
+
+---
+
 ### 7. AdminAccountsPage (Admin)
 
 **Mục đích:** Quản lý tất cả tài khoản trong hệ thống.
@@ -267,6 +288,22 @@ frontend/src/
 
 **Data fetching:**
 - `GET /api/v1/fraud/history`
+
+---
+
+### 11. AdminStocksPage (Admin)
+
+**Mục đích:** Quản lý mã chứng khoán (Ticket) và thông tin niêm yết trên bảng giá.
+
+**Tính năng:**
+- Quản lý danh sách các mã cổ phiếu đang giao dịch.
+- Đóng/Mở trạng thái một mã số cụ thể.
+- Quản lý thiết lập hệ thống thu phí chứng khoán.
+
+**Data fetching:**
+- `GET /api/v1/stocks`
+- `POST /api/v1/stocks`
+- `PUT /api/v1/stocks/{tickerSymbol}/status`
 
 ---
 
@@ -342,6 +379,7 @@ api.interceptors.response.use(
 | `paymentApi.ts` | `transfer(req)`, `getTransaction(id)`, `getHistory(accountId, page)`, `confirmOtp(id, otp)`, `cancelTransaction(id)` |
 | `loanApi.ts` | `applyLoan(req)`, `getLoan(id)`, `getMyLoans(page)`, `getCreditScore(userId)` |
 | `reportApi.ts` | `getStatement(accountId, from, to, page)`, `getMonthlySummary(accountId, year, month)` |
+| `stockApi.ts` | `getMarkets(page)`, `placeOrder(req)`, `getMyPortfolio()`, `addStock(req)`, `updateStatus(ticker, req)` |
 
 ---
 

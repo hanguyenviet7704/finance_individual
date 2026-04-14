@@ -3,13 +3,13 @@ import {
   LayoutDashboard, CreditCard, ArrowLeftRight,
   FileText, ShieldAlert, BookOpen,
   LogOut, Users, Settings, Home,
-  PiggyBank, BarChart3, Bell, UserCircle
+  PiggyBank, BarChart3, Bell, UserCircle,
+  TrendingUp
 } from 'lucide-react'
 import { clsx } from 'clsx'
 import { useAuthStore } from '@/store/authStore'
+import { useNotificationStore, type NotificationState, type Notif } from '@/store/notificationStore'
 import { authApi } from '@/api/authApi'
-
-const MOCK_UNREAD = 3   // số thông báo chưa đọc (sau này kéo từ API)
 
 const customerNavItems = [
   { to: '/dashboard', icon: LayoutDashboard, label: 'Tổng quan'   },
@@ -17,6 +17,7 @@ const customerNavItems = [
   { to: '/payment',   icon: ArrowLeftRight,  label: 'Giao dịch & Lịch sử' },
   { to: '/loan',      icon: PiggyBank,       label: 'Vay vốn'     },
   { to: '/report',    icon: BarChart3,       label: 'Sao kê'      },
+  { to: '/stock',     icon: TrendingUp,      label: 'Chứng khoán' },
 ]
 
 const adminSystemItems = [
@@ -24,6 +25,7 @@ const adminSystemItems = [
   { to: '/admin/transactions', icon: ArrowLeftRight, label: 'Giao dịch'        },
   { to: '/admin/fraud',        icon: ShieldAlert,    label: 'Fraud Detection'  },
   { to: '/admin/audit',        icon: BookOpen,       label: 'Audit Logs'       },
+  { to: '/admin/stocks',       icon: TrendingUp,     label: 'QL Chứng khoán'   },
 ]
 
 const adminPersonalItems = [
@@ -44,7 +46,7 @@ function NavItem({ to, icon: Icon, label, badge }: {
           : 'text-primary-200 hover:text-white hover:bg-white/8'
       )}
     >
-      <Icon className="w-4.5 h-4.5 shrink-0" />
+      <Icon className="w-[18px] h-[18px] shrink-0" />
       <span className="flex-1">{label}</span>
       {badge && badge > 0 && (
         <span className="inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full bg-bidv-red text-white text-[10px] font-bold">
@@ -57,6 +59,7 @@ function NavItem({ to, icon: Icon, label, badge }: {
 
 export function Sidebar() {
   const { user, logout } = useAuthStore()
+  const unreadCount = useNotificationStore((s: NotificationState) => s.items.filter((n: Notif) => n.status === 'unread').length)
   const isAdmin = user?.roles?.includes('admin')
 
   const handleLogout = async () => {
@@ -105,7 +108,7 @@ export function Sidebar() {
 
         {/* Common — hiện với cả customer & admin */}
         <p className="bidv-section-title">Tài khoản</p>
-        <NavItem to="/notifications" icon={Bell}       label="Thông báo" badge={MOCK_UNREAD} />
+        <NavItem to="/notifications" icon={Bell}       label="Thông báo" badge={unreadCount} />
         <NavItem to="/profile"       icon={UserCircle} label="Hồ sơ & Cài đặt" />
       </nav>
 

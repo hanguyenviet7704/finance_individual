@@ -1,37 +1,38 @@
 # Prompt: Scaffold a New Microservice
 
-Use this prompt to have an AI tool generate a complete microservice scaffold.
+Use this prompt to have an AI tool generate a complete microservice scaffold tailored to the Finance project.
 
 ---
 
 ## Prompt
 
 ```
-Create a new microservice called [SERVICE_NAME] using [LANGUAGE] and [FRAMEWORK].
+Create a new microservice called [SERVICE_NAME, e.g., limit-service] using Java 21 and Spring Boot 3.
 
 Location: services/[SERVICE_NAME]/
 
 Requirements:
-1. Project structure following [FRAMEWORK] best practices
-2. Dockerfile with multi-stage build
-3. GET /health endpoint returning {"status": "ok"}
-4. Basic CRUD endpoints for [ENTITY_NAME]:
-   - GET /[ENTITY_PLURAL] — list all
-   - GET /[ENTITY_PLURAL]/:id — get by ID
-   - POST /[ENTITY_PLURAL] — create
-   - PUT /[ENTITY_PLURAL]/:id — update
-   - DELETE /[ENTITY_PLURAL]/:id — delete
-5. Database connection using environment variables (DB_HOST, DB_PORT, DB_NAME, DB_USER, DB_PASSWORD)
-6. Input validation and error handling
-7. OpenAPI spec in docs/api-specs/[SERVICE_NAME].yaml
-8. Update docker-compose.yml to include this service
-9. Service readme.md with setup instructions
-
-The service should:
-- Listen on port 5000 inside the container
-- Use environment variables from .env
-- Be accessible via the API gateway
-- Follow RESTful conventions
+1. Standard Spring Boot project structure (`src/main/java/com/finance/[service]/...`)
+2. Dockerfile using the project's standard multi-stage build (maven -> jre-alpine).
+3. `pom.xml` including dependencies:
+   - Spring Web, Spring Boot Actuator, Spring Data JPA/MongoDB, Lombok
+   - Spring Cloud Netflix Eureka Client
+   - Spring Kafka (if event-driven)
+4. Application Configuration (`application.yml`):
+   - Port: [PORT]
+   - Application Name: [SERVICE_NAME]
+   - Eureka Client URL: `http://eureka-server:8761/eureka/`
+   - Database connection using environment variables (DB_HOST, DB_PORT, DB_NAME, DB_USER, DB_PASSWORD).
+5. Basic CRUD endpoints for [ENTITY_NAME]:
+   - GET /api/v1/[ENTITY_PLURAL] — list all
+   - GET /api/v1/[ENTITY_PLURAL]/{id} — get by ID
+   - POST /api/v1/[ENTITY_PLURAL] — create
+   - PUT /api/v1/[ENTITY_PLURAL]/{id} — update
+   - DELETE /api/v1/[ENTITY_PLURAL]/{id} — delete
+6. Global Exception Handler and DTO validation.
+7. Swagger / OpenAPI dependencies setup.
+8. Update root `docker-compose.yml` to include this service and its database.
+9. Service `readme.md` with setup instructions.
 ```
 
 ---
@@ -39,8 +40,8 @@ The service should:
 ## Example Usage
 
 Replace placeholders:
-- `[SERVICE_NAME]` → `user-service`
-- `[LANGUAGE]` → `Python`
-- `[FRAMEWORK]` → `FastAPI`
-- `[ENTITY_NAME]` → `User`
-- `[ENTITY_PLURAL]` → `users`
+- `[SERVICE_NAME]` → `limit-service`
+- `[PORT]` → `8088`
+- `[ENTITY_NAME]` → `TransactionLimit`
+- `[ENTITY_PLURAL]` → `limits`
+```

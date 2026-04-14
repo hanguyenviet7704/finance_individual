@@ -6,85 +6,10 @@ import {
 import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { formatDateTime } from '@/utils/format'
+import { useNotificationStore } from '@/store/notificationStore'
+import type { Notif } from '@/store/notificationStore'
 
 type NotifType = 'transaction' | 'security' | 'system' | 'promo'
-type NotifStatus = 'unread' | 'read'
-
-interface Notif {
-  id: string
-  type: NotifType
-  title: string
-  body: string
-  time: string
-  status: NotifStatus
-}
-
-const MOCK_NOTIFS: Notif[] = [
-  {
-    id: '1',
-    type: 'transaction',
-    title: 'Giao dịch thành công',
-    body: 'Chuyển khoản 5.000.000 VND đến FIN9876543210001 lúc 14:32 hôm nay.',
-    time: new Date(Date.now() - 10 * 60_000).toISOString(),
-    status: 'unread',
-  },
-  {
-    id: '2',
-    type: 'transaction',
-    title: 'Nhận tiền thành công',
-    body: 'Tài khoản nhận +2.500.000 VND từ FIN1234567890001. Số dư mới: 12.500.000 VND.',
-    time: new Date(Date.now() - 2 * 3600_000).toISOString(),
-    status: 'unread',
-  },
-  {
-    id: '3',
-    type: 'security',
-    title: 'Đăng nhập từ thiết bị mới',
-    body: 'Phát hiện đăng nhập từ Chrome trên Windows 11 tại Hà Nội. Nếu không phải bạn, hãy đổi mật khẩu ngay.',
-    time: new Date(Date.now() - 5 * 3600_000).toISOString(),
-    status: 'unread',
-  },
-  {
-    id: '4',
-    type: 'system',
-    title: 'Hạn mức giao dịch được cập nhật',
-    body: 'Hạn mức giao dịch ngày của bạn đã được cập nhật lên 100.000.000 VND sau khi xác minh KYC.',
-    time: new Date(Date.now() - 24 * 3600_000).toISOString(),
-    status: 'read',
-  },
-  {
-    id: '5',
-    type: 'promo',
-    title: 'Ưu đãi lãi suất vay đặc biệt',
-    body: 'Tháng 4/2026: Vay mua nhà lãi suất chỉ 6,5%/năm. Ưu đãi kéo dài đến 30/04/2026.',
-    time: new Date(Date.now() - 2 * 24 * 3600_000).toISOString(),
-    status: 'read',
-  },
-  {
-    id: '6',
-    type: 'transaction',
-    title: 'Thanh toán hoá đơn điện',
-    body: 'Thanh toán hoá đơn điện EVN tháng 3/2026 thành công. Số tiền: 450.000 VND.',
-    time: new Date(Date.now() - 3 * 24 * 3600_000).toISOString(),
-    status: 'read',
-  },
-  {
-    id: '7',
-    type: 'security',
-    title: 'Cảnh báo: Số dư thấp',
-    body: 'Số dư tài khoản của bạn xuống dưới 500.000 VND. Vui lòng nạp thêm tiền.',
-    time: new Date(Date.now() - 4 * 24 * 3600_000).toISOString(),
-    status: 'read',
-  },
-  {
-    id: '8',
-    type: 'system',
-    title: 'Báo cáo tháng 3/2026',
-    body: 'Báo cáo thu chi tháng 3 đã sẵn sàng. Tổng thu: 25.000.000 VND • Tổng chi: 18.500.000 VND.',
-    time: new Date(Date.now() - 7 * 24 * 3600_000).toISOString(),
-    status: 'read',
-  },
-]
 
 const TYPE_CFG: Record<NotifType, { icon: React.ElementType; color: string; bg: string; label: string }> = {
   transaction: { icon: ArrowLeftRight, color: 'text-primary-700',  bg: 'bg-primary-50',  label: 'Giao dịch' },
@@ -96,22 +21,11 @@ const TYPE_CFG: Record<NotifType, { icon: React.ElementType; color: string; bg: 
 type FilterType = 'all' | NotifType
 
 export function NotificationsPage() {
-  const [items, setItems]       = useState<Notif[]>(MOCK_NOTIFS)
-  const [filter, setFilter]     = useState<FilterType>('all')
+  const { items, markRead, markAllRead, deleteOne, clearAll } = useNotificationStore()
+  const [filter, setFilter]         = useState<FilterType>('all')
   const [onlyUnread, setOnlyUnread] = useState(false)
 
   const unreadCount = items.filter(n => n.status === 'unread').length
-
-  const markAllRead = () =>
-    setItems(p => p.map(n => ({ ...n, status: 'read' as const })))
-
-  const markRead = (id: string) =>
-    setItems(p => p.map(n => n.id === id ? { ...n, status: 'read' as const } : n))
-
-  const deleteOne = (id: string) =>
-    setItems(p => p.filter(n => n.id !== id))
-
-  const clearAll = () => setItems([])
 
   const filtered = items.filter(n => {
     if (onlyUnread && n.status !== 'unread') return false
@@ -206,7 +120,7 @@ export function NotificationsPage() {
         </Card>
       ) : (
         <div className="space-y-2">
-          {filtered.map((notif) => {
+          {filtered.map((notif: Notif) => {
             const cfg = TYPE_CFG[notif.type]
             const Icon = cfg.icon
             const isUnread = notif.status === 'unread'

@@ -1,33 +1,38 @@
 # Prompt: Generate a Dockerfile
 
-Use this prompt to create an optimized Dockerfile for any service.
+Use this prompt to create an optimized Dockerfile for a new Java Spring Boot service or React frontend within the Finance project.
 
 ---
 
 ## Prompt
 
 ```
-Generate a production-ready Dockerfile for a [LANGUAGE]/[FRAMEWORK] application.
+Generate a production-ready Dockerfile for a [Java Spring Boot 3 / React Vite] application.
 
-Service location: [SERVICE_PATH]
-Entry point: [ENTRY_POINT]
-Port: [PORT]
+Service location: [SERVICE_PATH, e.g., services/notification-service]
+Service name: [SERVICE_NAME]
+Port: [PORT, e.g., 8085]
 
-Requirements:
-1. Multi-stage build (builder + runtime)
-2. Use a minimal base image (alpine when possible)
-3. Install dependencies separately for Docker layer caching
-4. Copy only necessary files to the final image
-5. Run as non-root user
-6. Set proper WORKDIR
-7. Expose the correct port
-8. Include a HEALTHCHECK instruction
-9. Use .dockerignore to exclude unnecessary files
+Requirements for Java services:
+1. Multi-stage build using Maven and JRE
+2. Builder stage: `maven:3.9-eclipse-temurin-21-alpine`
+3. Runtime stage: `eclipse-temurin:21-jre-alpine`
+4. Use Maven Dependency Go Offline step for caching dependencies!
+5. Add a non-root user (`finance`) and run the JAR as this user.
+6. Set WORKDIR to `/app`.
+7. Expose the correct application port.
+8. Set up a HEALTHCHECK using the Spring Boot Actuator endpoint (`/actuator/health`).
+
+Requirements for React Frontend:
+1. Multi-stage build using Node and Nginx
+2. Builder stage: `node:20-alpine` (npm run build)
+3. Runtime stage: `nginx:1.25-alpine`
+4. Copy `dist/` to Nginx HTML folder.
 
 Optimize for:
-- Small image size
-- Fast build times (layer caching)
-- Security (non-root, minimal packages)
+- Small image size (Alpine)
+- Fast build times (Maven dependency caching layers)
+- Security (non-root)
 ```
 
 ---
@@ -35,9 +40,9 @@ Optimize for:
 ## Example
 
 ```
-Generate a production-ready Dockerfile for a Python/FastAPI application.
+Generate a production-ready Dockerfile for a Java/Spring Boot 3 application.
 
-Service location: services/service-a/
-Entry point: uvicorn src.main:app --host 0.0.0.0 --port 5000
-Port: 5000
+Service location: services/audit-service/
+Service Name: audit-service
+Port: 8087
 ```

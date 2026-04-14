@@ -573,7 +573,82 @@ Authorization: Bearer <token> (role ADMIN)
 
 ---
 
-## 8. Health Checks
+## 8. Stock Service — `/api/v1/stocks`
+
+### 8.1 Xem bảng giá thị trường (Market Data)
+
+```text
+GET /api/v1/stocks?page=0&size=50
+Authorization: Bearer <token>
+```
+
+**Response 200:**
+```json
+{
+  "content": [
+    {
+      "id": 1,
+      "tickerSymbol": "VCB",
+      "companyName": "Vietcombank",
+      "currentPrice": 95500.00,
+      "status": "ACTIVE"
+    }
+  ],
+  "totalElements": 500,
+  "totalPages": 10
+}
+```
+
+---
+
+### 8.2 Đặt lệnh chứng khoán (Order)
+
+```text
+POST /api/v1/stocks/orders
+Authorization: Bearer <token>
+Idempotency-Key: uuid
+```
+
+**Request:**
+```json
+{
+  "tickerSymbol": "VCB",
+  "orderType": "BUY",
+  "quantity": 100,
+  "pricePerShare": 95500.00
+}
+```
+
+**Response 201:** `StockOrderResponse` (Trạng thái `PENDING` chờ trừ tiền hoặc kiểm tra số lượng cổ)
+
+**Lỗi:** `400 MARKET_HALTED`, `422 INSUFFICIENT_BALANCE`, `422 INSUFFICIENT_STOCK`
+
+---
+
+### 8.3 Lấy Danh mục đầu tư (Portfolio)
+
+```text
+GET /api/v1/stocks/portfolios/me
+Authorization: Bearer <token>
+```
+
+**Response 200:** `PortfolioResponse` (Kèm danh sách tài sản và thống kê lời/lỗ dự định).
+
+---
+
+### 8.4 Quản lý mã chứng khoán (Admin)
+
+```text
+POST /api/v1/stocks
+PUT /api/v1/stocks/{tickerSymbol}/status
+Authorization: Bearer <token> (role ADMIN)
+```
+
+**Response 200/201:** Cập nhật thông tin mã.
+
+---
+
+## 9. Health Checks
 
 Tất cả service đều có endpoint health check không yêu cầu authentication:
 
@@ -586,6 +661,7 @@ curl http://localhost:8084/health          # Loan Service
 curl http://localhost:8085/health          # Notification Service
 curl http://localhost:8086/health          # Report Service
 curl http://localhost:8087/health          # Audit Service
+curl http://localhost:8088/health          # Stock Service
 curl http://localhost:8761/actuator/health # Eureka Server
 ```
 
@@ -593,7 +669,7 @@ curl http://localhost:8761/actuator/health # Eureka Server
 
 ---
 
-## 9. Kafka Event Contracts
+## 10. Kafka Event Contracts
 
 ### PaymentCreatedEvent
 
@@ -651,9 +727,26 @@ curl http://localhost:8761/actuator/health # Eureka Server
 }
 ```
 
+### StockOrderInitiatedEvent
+
+```json
+{
+  "eventId": "uuid",
+  "eventType": "stock.order.initiated",
+  "timestamp": "2026-04-12T10:45:00",
+  "payload": {
+    "orderId": "uuid",
+    "userId": "uuid",
+    "tickerSymbol": "VCB",
+    "orderType": "BUY",
+    "totalAmount": 9550000.00
+  }
+}
+```
+
 ---
 
-## 10. Mã lỗi chuẩn
+## 11. Mã lỗi chuẩn
 
 | HTTP | Code | Mô tả |
 |------|------|-------|
@@ -671,6 +764,7 @@ curl http://localhost:8761/actuator/health # Eureka Server
 | 409 | `DUPLICATE_TRANSACTION` | Idempotency-Key đã được dùng |
 | 429 | `RATE_LIMIT_EXCEEDED` | Vượt quá giới hạn request |
 | 422 | `INSUFFICIENT_BALANCE` | Số dư không đủ |
+| 422 | `INSUFFICIENT_STOCK` | Lượng chứng khoán 보유 không đủ để bán |
 | 422 | `DAILY_LIMIT_EXCEEDED` | Vượt hạn mức giao dịch ngày |
 | 422 | `CREDIT_SCORE_INSUFFICIENT` | Điểm tín dụng không đủ (< 400) |
 | 422 | `ACTIVE_LOAN_EXISTS` | Đã có khoản vay đang xử lý |

@@ -129,6 +129,17 @@ spring:
                 name: audit-cb
                 fallbackUri: forward:/fallback/audit
 
+        # Stock Service
+        - id: stock-route
+          uri: lb://stock-service
+          predicates:
+            - Path=/api/v1/stocks/**
+          filters:
+            - name: CircuitBreaker
+              args:
+                name: stock-cb
+                fallbackUri: forward:/fallback/stock
+
 eureka:
   client:
     service-url:
