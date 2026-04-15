@@ -7,7 +7,14 @@
       "Bash(ls services/fraud-service/src/)",
       "Bash(ls services/fraud-service/src/main/java/com/finance/fraud/)",
       "Bash(echo \"EXIT:$?\")",
-      "Bash(xargs ls:*)"
+      "Bash(xargs ls:*)",
+      "Bash(git -C \"c:/TaiLieu/TaiLieuPTIT/TaiLieuKy2Nam4/MonPTPMThayHung/finace/Finance\" ls-files frontend/package-lock.json)",
+      "Bash(kubectl get *)",
+      "Bash(kubectl logs *)",
+      "Bash(kubectl exec *)",
+      "Bash(curl -s -X POST http://34.59.223.167/api/v1/auth/register -H 'Content-Type: application/json' -d '{\"fullName\":\"Test Direct\",\"email\":\"testdirect@example.com\",\"phone\":\"0901234568\",\"password\":\"TestPass123\",\"confirmPassword\":\"TestPass123\",\"accountType\":\"CHECKING\"}')",
+      "Bash(curl -sv -X POST http://34.31.100.241/api/v1/auth/register -H 'Content-Type: application/json' -d '{\"fullName\":\"Test Nginx\",\"email\":\"testnginx@example.com\",\"phone\":\"0901234569\",\"password\":\"TestPass123\",\"confirmPassword\":\"TestPass123\",\"accountType\":\"CHECKING\"}')",
+      "Bash(curl -s -X POST http://34.31.100.241/api/v1/auth/register -H 'Content-Type: application/json' -d '{\"fullName\":\"Test Fixed\",\"email\":\"testfixed@example.com\",\"phone\":\"0901234570\",\"password\":\"TestPass123\",\"confirmPassword\":\"TestPass123\",\"accountType\":\"CHECKING\"}')"
     ]
   }
 }

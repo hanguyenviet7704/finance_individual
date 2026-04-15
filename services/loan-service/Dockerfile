@@ -10,6 +10,7 @@ COPY services/loan-service/pom.xml services/loan-service/pom.xml
 COPY services/notification-service/pom.xml services/notification-service/pom.xml
 COPY services/report-service/pom.xml services/report-service/pom.xml
 COPY services/audit-service/pom.xml services/audit-service/pom.xml
+COPY services/stock-service/pom.xml services/stock-service/pom.xml
 RUN mvn -pl services/loan-service dependency:go-offline -q
 COPY services/loan-service/src services/loan-service/src
 RUN mvn -pl services/loan-service package -DskipTests -q
