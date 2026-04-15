@@ -57,7 +57,7 @@ jobs:
           service_account: ${{ env.GCP_WIF_SERVICE_ACCOUNT }}
 
       - name: Set up gcloud CLI
-        uses: google-github-actions/setup-gcloud@v2
+        uses: google-github-actions/setup-gcloud@v3
 
       - name: Configure Docker to use gcloud auth
         run: gcloud auth configure-docker --quiet
@@ -66,10 +66,11 @@ jobs:
       # 3. Set up GKE credentials for kubectl
       # ─────────────────────────────────────
       - name: Get GKE credentials
-        uses: google-github-actions/get-gke-credentials@v2
+        uses: google-github-actions/get-gke-credentials@v3
         with:
           cluster_name: ${{ env.GKE_CLUSTER }}
           location: ${{ env.GKE_ZONE }}
+          project_id: ${{ env.PROJECT_ID }}
 
       # ─────────────────────────────────────
       # 4. Build & Push — Eureka Server
@@ -97,32 +98,32 @@ jobs:
 
       - name: Build & Push payment-service
         run: |
-          docker build -t $REGISTRY/finance-payment-service:${{ github.sha }} ./services/payment-service
+          docker build -t $REGISTRY/finance-payment-service:${{ github.sha }} -f ./services/payment-service/Dockerfile .
           docker push $REGISTRY/finance-payment-service:${{ github.sha }}
 
       - name: Build & Push fraud-service
         run: |
-          docker build -t $REGISTRY/finance-fraud-service:${{ github.sha }} ./services/fraud-service
+          docker build -t $REGISTRY/finance-fraud-service:${{ github.sha }} -f ./services/fraud-service/Dockerfile .
           docker push $REGISTRY/finance-fraud-service:${{ github.sha }}
 
       - name: Build & Push loan-service
         run: |
-          docker build -t $REGISTRY/finance-loan-service:${{ github.sha }} ./services/loan-service
+          docker build -t $REGISTRY/finance-loan-service:${{ github.sha }} -f ./services/loan-service/Dockerfile .
           docker push $REGISTRY/finance-loan-service:${{ github.sha }}
 
       - name: Build & Push notification-service
         run: |
-          docker build -t $REGISTRY/finance-notification-service:${{ github.sha }} ./services/notification-service
+          docker build -t $REGISTRY/finance-notification-service:${{ github.sha }} -f ./services/notification-service/Dockerfile .
           docker push $REGISTRY/finance-notification-service:${{ github.sha }}
 
       - name: Build & Push report-service
         run: |
-          docker build -t $REGISTRY/finance-report-service:${{ github.sha }} ./services/report-service
+          docker build -t $REGISTRY/finance-report-service:${{ github.sha }} -f ./services/report-service/Dockerfile .
           docker push $REGISTRY/finance-report-service:${{ github.sha }}
 
       - name: Build & Push audit-service
         run: |
-          docker build -t $REGISTRY/finance-audit-service:${{ github.sha }} ./services/audit-service
+          docker build -t $REGISTRY/finance-audit-service:${{ github.sha }} -f ./services/audit-service/Dockerfile .
           docker push $REGISTRY/finance-audit-service:${{ github.sha }}
 
       - name: Build & Push stock-service
