@@ -1,7 +1,9 @@
 name: CD — Deploy to GKE
 
 on:
-  workflow_dispatch:   # Chỉ chạy khi trigger thủ công (cần cấu hình GCP secrets trước)
+  push:
+    branches: ["main"]
+  workflow_dispatch:   # Cho phép chạy thủ công khi cần
 
 env:
   PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
@@ -19,15 +21,40 @@ jobs:
       # 1. Checkout code
       # ─────────────────────────────────────
       - name: Checkout source code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       # ─────────────────────────────────────
       # 2. Xác thực với Google Cloud
       # ─────────────────────────────────────
-      - name: Authenticate to Google Cloud
-        uses: google-github-actions/auth@v2
+      - name: Validate GCP auth configuration
+        shell: bash
+        env:
+          GCP_SA_KEY: ${{ secrets.GCP_SA_KEY }}
+          GCP_WIF_PROVIDER: ${{ secrets.GCP_WIF_PROVIDER }}
+          GCP_WIF_SERVICE_ACCOUNT: ${{ secrets.GCP_WIF_SERVICE_ACCOUNT }}
+        run: |
+          if [[ -n "$GCP_SA_KEY" ]] && [[ -n "$GCP_WIF_PROVIDER" || -n "$GCP_WIF_SERVICE_ACCOUNT" ]]; then
+            echo "::error::Set either GCP_SA_KEY or (GCP_WIF_PROVIDER + GCP_WIF_SERVICE_ACCOUNT), not both."
+            exit 1
+          fi
+
+          if [[ -z "$GCP_SA_KEY" ]] && ([[ -z "$GCP_WIF_PROVIDER" ]] || [[ -z "$GCP_WIF_SERVICE_ACCOUNT" ]]); then
+            echo "::error::Missing GCP auth secrets. Set GCP_SA_KEY or both GCP_WIF_PROVIDER and GCP_WIF_SERVICE_ACCOUNT."
+            exit 1
+          fi
+
+      - name: Authenticate to Google Cloud (Service Account Key)
+        if: ${{ secrets.GCP_SA_KEY != '' }}
+        uses: google-github-actions/auth@v3
         with:
           credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+      - name: Authenticate to Google Cloud (Workload Identity Federation)
+        if: ${{ secrets.GCP_SA_KEY == '' && secrets.GCP_WIF_PROVIDER != '' && secrets.GCP_WIF_SERVICE_ACCOUNT != '' }}
+        uses: google-github-actions/auth@v3
+        with:
+          workload_identity_provider: ${{ secrets.GCP_WIF_PROVIDER }}
+          service_account: ${{ secrets.GCP_WIF_SERVICE_ACCOUNT }}
 
       - name: Set up gcloud CLI
         uses: google-github-actions/setup-gcloud@v2
