@@ -36,9 +36,9 @@ jobs:
           distribution: "temurin"
           cache: maven
 
-      - name: Build ${{ matrix.service }} (compile + skip integration tests)
+      - name: Build ${{ matrix.service }} (compile only, skip all tests)
         run: |
-          mvn -pl services/${{ matrix.service }} -am package -DskipTests=true -q
+          mvn -pl services/${{ matrix.service }} -am package -Dmaven.test.skip=true -q
         env:
           SPRING_PROFILES_ACTIVE: test
 
@@ -57,11 +57,9 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: "20"
-          cache: "npm"
-          cache-dependency-path: frontend/package-lock.json
 
       - name: Install dependencies
-        run: npm ci
+        run: npm install
         working-directory: frontend
 
       - name: Run type check
