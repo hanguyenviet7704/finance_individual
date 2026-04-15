@@ -7,8 +7,8 @@ on:
 
 env:
   PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
-  GKE_CLUSTER: finance-cluster
-  GKE_ZONE: asia-southeast1-a
+  GKE_CLUSTER: finance-cluster-b
+  GKE_ZONE: asia-southeast1-b
   REGISTRY: gcr.io/${{ secrets.GCP_PROJECT_ID }}
 
 jobs:
