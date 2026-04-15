@@ -74,15 +74,19 @@ public class AuthService {
         account = accountRepository.save(account);
         log.info("New account registered: {} email={}", account.getAccountNumber(), request.getEmail());
 
-        kafkaTemplate.send("account.created", account.getId().toString(),
-            Map.of(
-                "eventType", "account.created",
-                "accountId", account.getId().toString(),
-                "userId", userId.toString(),
-                "accountNumber", accountNumber,
-                "fullName", request.getFullName(),
-                "email", request.getEmail()
-            ));
+        try {
+            kafkaTemplate.send("account.created", account.getId().toString(),
+                Map.of(
+                    "eventType", "account.created",
+                    "accountId", account.getId().toString(),
+                    "userId", userId.toString(),
+                    "accountNumber", accountNumber,
+                    "fullName", request.getFullName(),
+                    "email", request.getEmail()
+                ));
+        } catch (Exception e) {
+            log.warn("Failed to publish account.created event (non-critical): {}", e.getMessage());
+        }
 
         String accessToken = generateToken(account);
         String refreshToken = UUID.randomUUID().toString();
