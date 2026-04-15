@@ -161,6 +161,7 @@ jobs:
       # ─────────────────────────────────────
       - name: Deploy to GKE
         run: |
+          kubectl apply -f k8s/00-namespace.yaml
           kubectl apply -f k8s/01-configmap.yaml
           kubectl apply -f k8s/02-secrets.yaml
           kubectl apply -f k8s/03-mysql.yaml
