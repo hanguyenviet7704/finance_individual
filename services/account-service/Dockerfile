@@ -3,7 +3,7 @@ WORKDIR /build
 COPY pom.xml ./pom.xml
 RUN mvn dependency:go-offline -q
 COPY src ./src
-RUN mvn package -DskipTests -q
+RUN mvn package -Dmaven.test.skip=true -q
 
 FROM eclipse-temurin:21-jre-alpine
 RUN addgroup -S finance && adduser -S finance -G finance

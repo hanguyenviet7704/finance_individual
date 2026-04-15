@@ -1,0 +1,299 @@
+# =====================================================
+#  MYSQL - account-db
+# =====================================================
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: mysql-account
+  namespace: finance
+spec:
+  serviceName: mysql-account
+  replicas: 1
+  selector:
+    matchLabels:
+      app: mysql-account
+  template:
+    metadata:
+      labels:
+        app: mysql-account
+    spec:
+      containers:
+        - name: mysql
+          image: mysql:8.0
+          ports:
+            - containerPort: 3306
+          env:
+            - name: MYSQL_ROOT_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: finance-secrets
+                  key: DB_PASSWORD
+            - name: MYSQL_DATABASE
+              valueFrom:
+                configMapKeyRef:
+                  name: finance-config
+                  key: MYSQL_ACCOUNT_DB
+          volumeMounts:
+            - name: data
+              mountPath: /var/lib/mysql
+          readinessProbe:
+            exec:
+              command: ["mysqladmin", "ping", "-h", "localhost", "-uroot", "-proot"]
+            initialDelaySeconds: 20
+            periodSeconds: 10
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        resources:
+          requests:
+            storage: 5Gi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mysql-account
+  namespace: finance
+spec:
+  clusterIP: None
+  selector:
+    app: mysql-account
+  ports:
+    - port: 3306
+---
+# =====================================================
+#  MYSQL - payment-db
+# =====================================================
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: mysql-payment
+  namespace: finance
+spec:
+  serviceName: mysql-payment
+  replicas: 1
+  selector:
+    matchLabels:
+      app: mysql-payment
+  template:
+    metadata:
+      labels:
+        app: mysql-payment
+    spec:
+      containers:
+        - name: mysql
+          image: mysql:8.0
+          ports:
+            - containerPort: 3306
+          env:
+            - name: MYSQL_ROOT_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: finance-secrets
+                  key: DB_PASSWORD
+            - name: MYSQL_DATABASE
+              valueFrom:
+                configMapKeyRef:
+                  name: finance-config
+                  key: MYSQL_PAYMENT_DB
+          volumeMounts:
+            - name: data
+              mountPath: /var/lib/mysql
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        resources:
+          requests:
+            storage: 5Gi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mysql-payment
+  namespace: finance
+spec:
+  clusterIP: None
+  selector:
+    app: mysql-payment
+  ports:
+    - port: 3306
+---
+# =====================================================
+#  MYSQL - fraud-db
+# =====================================================
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: mysql-fraud
+  namespace: finance
+spec:
+  serviceName: mysql-fraud
+  replicas: 1
+  selector:
+    matchLabels:
+      app: mysql-fraud
+  template:
+    metadata:
+      labels:
+        app: mysql-fraud
+    spec:
+      containers:
+        - name: mysql
+          image: mysql:8.0
+          ports:
+            - containerPort: 3306
+          env:
+            - name: MYSQL_ROOT_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: finance-secrets
+                  key: DB_PASSWORD
+            - name: MYSQL_DATABASE
+              valueFrom:
+                configMapKeyRef:
+                  name: finance-config
+                  key: MYSQL_FRAUD_DB
+          volumeMounts:
+            - name: data
+              mountPath: /var/lib/mysql
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        resources:
+          requests:
+            storage: 5Gi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mysql-fraud
+  namespace: finance
+spec:
+  clusterIP: None
+  selector:
+    app: mysql-fraud
+  ports:
+    - port: 3306
+---
+# =====================================================
+#  MYSQL - loan-db
+# =====================================================
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: mysql-loan
+  namespace: finance
+spec:
+  serviceName: mysql-loan
+  replicas: 1
+  selector:
+    matchLabels:
+      app: mysql-loan
+  template:
+    metadata:
+      labels:
+        app: mysql-loan
+    spec:
+      containers:
+        - name: mysql
+          image: mysql:8.0
+          ports:
+            - containerPort: 3306
+          env:
+            - name: MYSQL_ROOT_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: finance-secrets
+                  key: DB_PASSWORD
+            - name: MYSQL_DATABASE
+              valueFrom:
+                configMapKeyRef:
+                  name: finance-config
+                  key: MYSQL_LOAN_DB
+          volumeMounts:
+            - name: data
+              mountPath: /var/lib/mysql
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        resources:
+          requests:
+            storage: 5Gi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mysql-loan
+  namespace: finance
+spec:
+  clusterIP: None
+  selector:
+    app: mysql-loan
+  ports:
+    - port: 3306
+---
+# =====================================================
+#  MYSQL - stock-db
+# =====================================================
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: mysql-stock
+  namespace: finance
+spec:
+  serviceName: mysql-stock
+  replicas: 1
+  selector:
+    matchLabels:
+      app: mysql-stock
+  template:
+    metadata:
+      labels:
+        app: mysql-stock
+    spec:
+      containers:
+        - name: mysql
+          image: mysql:8.0
+          ports:
+            - containerPort: 3306
+          env:
+            - name: MYSQL_ROOT_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: finance-secrets
+                  key: DB_PASSWORD
+            - name: MYSQL_DATABASE
+              valueFrom:
+                configMapKeyRef:
+                  name: finance-config
+                  key: MYSQL_STOCK_DB
+          volumeMounts:
+            - name: data
+              mountPath: /var/lib/mysql
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        resources:
+          requests:
+            storage: 5Gi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mysql-stock
+  namespace: finance
+spec:
+  clusterIP: None
+  selector:
+    app: mysql-stock
+  ports:
+    - port: 3306

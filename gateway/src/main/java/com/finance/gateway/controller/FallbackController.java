@@ -14,50 +14,42 @@ import java.util.Map;
 @RequestMapping("/fallback")
 public class FallbackController {
 
-    @GetMapping("/account")
-    @PostMapping("/account")
+    @RequestMapping(value = "/account")
     public Mono<ResponseEntity<Map<String, String>>> accountFallback() {
         return fallbackResponse("account-service");
     }
 
-    @GetMapping("/payment")
-    @PostMapping("/payment")
+    @RequestMapping(value = "/payment")
     public Mono<ResponseEntity<Map<String, String>>> paymentFallback() {
         return fallbackResponse("payment-service");
     }
 
-    @GetMapping("/loan")
-    @PostMapping("/loan")
+    @RequestMapping(value = "/loan")
     public Mono<ResponseEntity<Map<String, String>>> loanFallback() {
         return fallbackResponse("loan-service");
     }
 
-    @GetMapping("/fraud")
-    @PostMapping("/fraud")
+    @RequestMapping(value = "/fraud")
     public Mono<ResponseEntity<Map<String, String>>> fraudFallback() {
         return fallbackResponse("fraud-service");
     }
 
-    @GetMapping("/report")
-    @PostMapping("/report")
+    @RequestMapping(value = "/report")
     public Mono<ResponseEntity<Map<String, String>>> reportFallback() {
         return fallbackResponse("report-service");
     }
 
-    @GetMapping("/notification")
-    @PostMapping("/notification")
+    @RequestMapping(value = "/notification")
     public Mono<ResponseEntity<Map<String, String>>> notificationFallback() {
         return fallbackResponse("notification-service");
     }
 
-    @GetMapping("/audit")
-    @PostMapping("/audit")
+    @RequestMapping(value = "/audit")
     public Mono<ResponseEntity<Map<String, String>>> auditFallback() {
         return fallbackResponse("audit-service");
     }
 
-    @GetMapping("/auth")
-    @PostMapping("/auth")
+    @RequestMapping(value = "/auth")
     public Mono<ResponseEntity<Map<String, String>>> authFallback() {
         return fallbackResponse("auth-service");
     }

@@ -1,0 +1,161 @@
+name: CD — Deploy to GKE
+
+on:
+  push:
+    branches: ["main"]   # Chỉ deploy khi merge/push vào nhánh main
+
+env:
+  PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
+  GKE_CLUSTER: finance-cluster
+  GKE_ZONE: asia-southeast1-a
+  REGISTRY: gcr.io/${{ secrets.GCP_PROJECT_ID }}
+
+jobs:
+  deploy:
+    name: Build, Push & Deploy
+    runs-on: ubuntu-latest
+    # Chỉ chạy job này sau khi CI pass (tham chiếu workflow ci.yml)
+    needs: []
+
+    steps:
+      # ─────────────────────────────────────
+      # 1. Checkout code
+      # ─────────────────────────────────────
+      - name: Checkout source code
+        uses: actions/checkout@v4
+
+      # ─────────────────────────────────────
+      # 2. Xác thực với Google Cloud
+      # ─────────────────────────────────────
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+      - name: Set up gcloud CLI
+        uses: google-github-actions/setup-gcloud@v2
+
+      - name: Configure Docker to use gcloud auth
+        run: gcloud auth configure-docker --quiet
+
+      # ─────────────────────────────────────
+      # 3. Set up GKE credentials for kubectl
+      # ─────────────────────────────────────
+      - name: Get GKE credentials
+        uses: google-github-actions/get-gke-credentials@v2
+        with:
+          cluster_name: ${{ env.GKE_CLUSTER }}
+          location: ${{ env.GKE_ZONE }}
+
+      # ─────────────────────────────────────
+      # 4. Build & Push — Eureka Server
+      # ─────────────────────────────────────
+      - name: Build & Push eureka-server
+        run: |
+          docker build -t $REGISTRY/finance-eureka-server:${{ github.sha }} ./services/eureka-server
+          docker push $REGISTRY/finance-eureka-server:${{ github.sha }}
+
+      # ─────────────────────────────────────
+      # 5. Build & Push — API Gateway
+      # ─────────────────────────────────────
+      - name: Build & Push api-gateway
+        run: |
+          docker build -t $REGISTRY/finance-api-gateway:${{ github.sha }} ./gateway
+          docker push $REGISTRY/finance-api-gateway:${{ github.sha }}
+
+      # ─────────────────────────────────────
+      # 6. Build & Push — All Microservices
+      # ─────────────────────────────────────
+      - name: Build & Push account-service
+        run: |
+          docker build -t $REGISTRY/finance-account-service:${{ github.sha }} ./services/account-service
+          docker push $REGISTRY/finance-account-service:${{ github.sha }}
+
+      - name: Build & Push payment-service
+        run: |
+          docker build -t $REGISTRY/finance-payment-service:${{ github.sha }} ./services/payment-service
+          docker push $REGISTRY/finance-payment-service:${{ github.sha }}
+
+      - name: Build & Push fraud-service
+        run: |
+          docker build -t $REGISTRY/finance-fraud-service:${{ github.sha }} ./services/fraud-service
+          docker push $REGISTRY/finance-fraud-service:${{ github.sha }}
+
+      - name: Build & Push loan-service
+        run: |
+          docker build -t $REGISTRY/finance-loan-service:${{ github.sha }} ./services/loan-service
+          docker push $REGISTRY/finance-loan-service:${{ github.sha }}
+
+      - name: Build & Push notification-service
+        run: |
+          docker build -t $REGISTRY/finance-notification-service:${{ github.sha }} ./services/notification-service
+          docker push $REGISTRY/finance-notification-service:${{ github.sha }}
+
+      - name: Build & Push report-service
+        run: |
+          docker build -t $REGISTRY/finance-report-service:${{ github.sha }} ./services/report-service
+          docker push $REGISTRY/finance-report-service:${{ github.sha }}
+
+      - name: Build & Push audit-service
+        run: |
+          docker build -t $REGISTRY/finance-audit-service:${{ github.sha }} ./services/audit-service
+          docker push $REGISTRY/finance-audit-service:${{ github.sha }}
+
+      - name: Build & Push stock-service
+        run: |
+          docker build -t $REGISTRY/finance-stock-service:${{ github.sha }} ./services/stock-service
+          docker push $REGISTRY/finance-stock-service:${{ github.sha }}
+
+      - name: Build & Push frontend
+        run: |
+          docker build -t $REGISTRY/finance-frontend:${{ github.sha }} ./frontend
+          docker push $REGISTRY/finance-frontend:${{ github.sha }}
+
+      # ─────────────────────────────────────
+      # 7. Update image tags in K8s manifests
+      # ─────────────────────────────────────
+      - name: Update image tags in manifests
+        run: |
+          SHA=${{ github.sha }}
+          PID=${{ secrets.GCP_PROJECT_ID }}
+
+          sed -i "s|gcr.io/.*/finance-eureka-server:.*|gcr.io/$PID/finance-eureka-server:$SHA|g"       k8s/05-eureka-gateway.yaml
+          sed -i "s|gcr.io/.*/finance-api-gateway:.*|gcr.io/$PID/finance-api-gateway:$SHA|g"           k8s/05-eureka-gateway.yaml
+          sed -i "s|gcr.io/.*/finance-account-service:.*|gcr.io/$PID/finance-account-service:$SHA|g"   k8s/06-services.yaml
+          sed -i "s|gcr.io/.*/finance-payment-service:.*|gcr.io/$PID/finance-payment-service:$SHA|g"   k8s/06-services.yaml
+          sed -i "s|gcr.io/.*/finance-fraud-service:.*|gcr.io/$PID/finance-fraud-service:$SHA|g"       k8s/06-services.yaml
+          sed -i "s|gcr.io/.*/finance-loan-service:.*|gcr.io/$PID/finance-loan-service:$SHA|g"         k8s/06-services.yaml
+          sed -i "s|gcr.io/.*/finance-notification-service:.*|gcr.io/$PID/finance-notification-service:$SHA|g" k8s/06-services.yaml
+          sed -i "s|gcr.io/.*/finance-report-service:.*|gcr.io/$PID/finance-report-service:$SHA|g"     k8s/06-services.yaml
+          sed -i "s|gcr.io/.*/finance-audit-service:.*|gcr.io/$PID/finance-audit-service:$SHA|g"       k8s/06-services.yaml
+          sed -i "s|gcr.io/.*/finance-stock-service:.*|gcr.io/$PID/finance-stock-service:$SHA|g"       k8s/06-services.yaml
+          sed -i "s|gcr.io/.*/finance-frontend:.*|gcr.io/$PID/finance-frontend:$SHA|g"                 k8s/07-frontend.yaml
+
+      # ─────────────────────────────────────
+      # 8. Rolling Deploy lên GKE
+      # ─────────────────────────────────────
+      - name: Deploy to GKE
+        run: |
+          kubectl apply -f k8s/01-configmap.yaml
+          kubectl apply -f k8s/02-secrets.yaml
+          kubectl apply -f k8s/03-mysql.yaml
+          kubectl apply -f k8s/04-infra.yaml
+          kubectl apply -f k8s/05-eureka-gateway.yaml
+          kubectl apply -f k8s/06-services.yaml
+          kubectl apply -f k8s/07-frontend.yaml
+
+      # ─────────────────────────────────────
+      # 9. Chờ Rollout hoàn tất
+      # ─────────────────────────────────────
+      - name: Wait for rollout to complete
+        run: |
+          kubectl rollout status deployment/api-gateway -n finance --timeout=180s
+          kubectl rollout status deployment/frontend   -n finance --timeout=180s
+
+      # ─────────────────────────────────────
+      # 10. In ra External IP để biết địa chỉ
+      # ─────────────────────────────────────
+      - name: Print service endpoints
+        run: |
+          echo "=== DEPLOYED ENDPOINTS ==="
+          kubectl get svc -n finance -o wide

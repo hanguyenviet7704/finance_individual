@@ -1,0 +1,379 @@
+# Helper macro for env injection — copied on each microservice Deployment
+# Each service only differs in: name, image, containerPort, MYSQL_HOST env var
+# =====================================================
+#  account-service (8081)
+# =====================================================
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: account-service
+  namespace: finance
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: account-service
+  template:
+    metadata:
+      labels:
+        app: account-service
+    spec:
+      enableServiceLinks: false
+      containers:
+        - name: account-service
+          image: gcr.io/finance-493401/finance-account-service:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8081
+          envFrom:
+            - configMapRef:
+                name: finance-config
+            - secretRef:
+                name: finance-secrets
+          env:
+            - name: MYSQL_HOST
+              valueFrom:
+                configMapKeyRef:
+                  name: finance-config
+                  key: MYSQL_ACCOUNT_HOST
+          readinessProbe:
+            httpGet:
+              path: /actuator/health
+              port: 8081
+            initialDelaySeconds: 60
+            periodSeconds: 15
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: account-service
+  namespace: finance
+spec:
+  selector:
+    app: account-service
+  ports:
+    - port: 8081
+---
+# =====================================================
+#  payment-service (8082)
+# =====================================================
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: payment-service
+  namespace: finance
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: payment-service
+  template:
+    metadata:
+      labels:
+        app: payment-service
+    spec:
+      enableServiceLinks: false
+      containers:
+        - name: payment-service
+          image: gcr.io/finance-493401/finance-payment-service:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8082
+          envFrom:
+            - configMapRef:
+                name: finance-config
+            - secretRef:
+                name: finance-secrets
+          env:
+            - name: MYSQL_HOST
+              valueFrom:
+                configMapKeyRef:
+                  name: finance-config
+                  key: MYSQL_PAYMENT_HOST
+          readinessProbe:
+            httpGet:
+              path: /actuator/health
+              port: 8082
+            initialDelaySeconds: 60
+            periodSeconds: 15
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: payment-service
+  namespace: finance
+spec:
+  selector:
+    app: payment-service
+  ports:
+    - port: 8082
+---
+# =====================================================
+#  fraud-service (8083)
+# =====================================================
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: fraud-service
+  namespace: finance
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: fraud-service
+  template:
+    metadata:
+      labels:
+        app: fraud-service
+    spec:
+      enableServiceLinks: false
+      containers:
+        - name: fraud-service
+          image: gcr.io/finance-493401/finance-fraud-service:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8083
+          envFrom:
+            - configMapRef:
+                name: finance-config
+            - secretRef:
+                name: finance-secrets
+          env:
+            - name: MYSQL_HOST
+              valueFrom:
+                configMapKeyRef:
+                  name: finance-config
+                  key: MYSQL_FRAUD_HOST
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: fraud-service
+  namespace: finance
+spec:
+  selector:
+    app: fraud-service
+  ports:
+    - port: 8083
+---
+# =====================================================
+#  loan-service (8084)
+# =====================================================
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: loan-service
+  namespace: finance
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: loan-service
+  template:
+    metadata:
+      labels:
+        app: loan-service
+    spec:
+      enableServiceLinks: false
+      containers:
+        - name: loan-service
+          image: gcr.io/finance-493401/finance-loan-service:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8084
+          envFrom:
+            - configMapRef:
+                name: finance-config
+            - secretRef:
+                name: finance-secrets
+          env:
+            - name: MYSQL_HOST
+              valueFrom:
+                configMapKeyRef:
+                  name: finance-config
+                  key: MYSQL_LOAN_HOST
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: loan-service
+  namespace: finance
+spec:
+  selector:
+    app: loan-service
+  ports:
+    - port: 8084
+---
+# =====================================================
+#  notification-service (8085)
+# =====================================================
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: notification-service
+  namespace: finance
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: notification-service
+  template:
+    metadata:
+      labels:
+        app: notification-service
+    spec:
+      enableServiceLinks: false
+      containers:
+        - name: notification-service
+          image: gcr.io/finance-493401/finance-notification-service:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8085
+          envFrom:
+            - configMapRef:
+                name: finance-config
+            - secretRef:
+                name: finance-secrets
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: notification-service
+  namespace: finance
+spec:
+  selector:
+    app: notification-service
+  ports:
+    - port: 8085
+---
+# =====================================================
+#  report-service (8086)
+# =====================================================
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: report-service
+  namespace: finance
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: report-service
+  template:
+    metadata:
+      labels:
+        app: report-service
+    spec:
+      enableServiceLinks: false
+      containers:
+        - name: report-service
+          image: gcr.io/finance-493401/finance-report-service:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8086
+          envFrom:
+            - configMapRef:
+                name: finance-config
+            - secretRef:
+                name: finance-secrets
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: report-service
+  namespace: finance
+spec:
+  selector:
+    app: report-service
+  ports:
+    - port: 8086
+---
+# =====================================================
+#  audit-service (8087)
+# =====================================================
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: audit-service
+  namespace: finance
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: audit-service
+  template:
+    metadata:
+      labels:
+        app: audit-service
+    spec:
+      enableServiceLinks: false
+      containers:
+        - name: audit-service
+          image: gcr.io/finance-493401/finance-audit-service:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8087
+          envFrom:
+            - configMapRef:
+                name: finance-config
+            - secretRef:
+                name: finance-secrets
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: audit-service
+  namespace: finance
+spec:
+  selector:
+    app: audit-service
+  ports:
+    - port: 8087
+---
+# =====================================================
+#  stock-service (8088)
+# =====================================================
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: stock-service
+  namespace: finance
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: stock-service
+  template:
+    metadata:
+      labels:
+        app: stock-service
+    spec:
+      enableServiceLinks: false
+      containers:
+        - name: stock-service
+          image: gcr.io/finance-493401/finance-stock-service:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8088
+          envFrom:
+            - configMapRef:
+                name: finance-config
+            - secretRef:
+                name: finance-secrets
+          env:
+            - name: MYSQL_HOST
+              valueFrom:
+                configMapKeyRef:
+                  name: finance-config
+                  key: MYSQL_STOCK_HOST
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: stock-service
+  namespace: finance
+spec:
+  selector:
+    app: stock-service
+  ports:
+    - port: 8088
