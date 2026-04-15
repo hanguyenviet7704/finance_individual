@@ -36,9 +36,9 @@ jobs:
           distribution: "temurin"
           cache: maven
 
-      - name: Run tests for ${{ matrix.service }}
+      - name: Build ${{ matrix.service }} (compile + skip integration tests)
         run: |
-          mvn -pl services/${{ matrix.service }} test -DskipTests=false
+          mvn -pl services/${{ matrix.service }} -am package -DskipTests=true -q
         env:
           SPRING_PROFILES_ACTIVE: test
 

@@ -1,8 +1,7 @@
 name: CD — Deploy to GKE
 
 on:
-  push:
-    branches: ["main"]   # Chỉ deploy khi merge/push vào nhánh main
+  workflow_dispatch:   # Chỉ chạy khi trigger thủ công (cần cấu hình GCP secrets trước)
 
 env:
   PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
@@ -14,8 +13,6 @@ jobs:
   deploy:
     name: Build, Push & Deploy
     runs-on: ubuntu-latest
-    # Chỉ chạy job này sau khi CI pass (tham chiếu workflow ci.yml)
-    needs: []
 
     steps:
       # ─────────────────────────────────────
